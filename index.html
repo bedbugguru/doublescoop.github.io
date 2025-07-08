@@ -1,0 +1,1516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Double Scoop by bed bug guru - OUT NOW!!!</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* Dark background */
+            color: #e2e8f0; /* Light text */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            cursor: default; /* Default cursor for canvas */
+            touch-action: none; /* Prevent default touch actions like scrolling/zooming on canvas */
+        }
+        #info-box {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 15px 25px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 1.1em;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            z-index: 10;
+        }
+        #restart-button {
+            position: absolute; /* Position relative to body, not the 3D scene */
+            top: 150px; /* Place at the top, below other info */
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #4CAF50; /* Green */
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.2em;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            z-index: 30; /* Ensure it's above the canvas */
+            display: none; /* Hidden by default */
+        }
+        #restart-button:hover {
+            background-color: #45a049;
+            transform: translateX(-50%) translateY(-2px); /* Maintain center alignment */
+        }
+        #mouse-look-info {
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 0.9em;
+            color: #a0aec0;
+            z-index: 10;
+            display: none; /* Hidden by default, only show when in a room */
+        }
+
+        /* Mobile Controls Styling */
+        #mobile-controls {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column; /* Stack controls vertically */
+            align-items: center; /* Center horizontally */
+            gap: 5px; /* Space between rows */
+            z-index: 50;
+            pointer-events: none; /* Allow clicks to pass through by default */
+            background: linear-gradient(to top, rgba(0,0,0,0.6), transparent); /* Subtle gradient */
+            padding-bottom: 20px; /* More padding from the bottom edge */
+        }
+
+        #mobile-controls .row {
+            display: flex;
+            gap: 5px; /* Space between buttons in a row */
+        }
+
+        #mobile-controls button {
+            pointer-events: auto; /* Re-enable pointer events for the buttons */
+            touch-action: none; /* Prevent browser default touch actions (e.g., scrolling) */
+            width: 70px; /* Fixed size for touch buttons */
+            height: 70px;
+            background-color: rgba(70, 70, 70, 0.8);
+            border-radius: 10px; /* Slightly rounded corners for keyboard look */
+            color: white;
+            font-size: 2em; /* Larger font for better visibility */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.1s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+        #mobile-controls button:active {
+            background-color: rgba(100, 100, 100, 0.8);
+        }
+
+        /* Adjustments for smaller screens (still apply for other elements) */
+        @media (max-width: 768px) {
+            #info-box {
+                top: 10px; /* Adjust position for mobile */
+                font-size: 0.9em;
+                padding: 10px 15px;
+            }
+            #mouse-look-info {
+                top: 60px; /* Adjust position for mobile */
+                font-size: 0.8em;
+                padding: 8px 12px;
+            }
+            #restart-button {
+                top: 120px; /* Adjust position for mobile */
+                padding: 12px 25px;
+                font-size: 1em;
+            }
+            #mobile-controls button {
+                width: 60px;
+                height: 60px;
+                font-size: 1.8em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="info-box">
+        <p>Use WASD or Arrow Keys to move. Avoid the spider!</p>
+        <p id="section-info">Current Section: Start</p>
+    </div>
+    <div id="mouse-look-info">Click and drag on the game to look around.</div>
+
+    <button id="restart-button">Back to Site</button>
+
+    <div id="mobile-controls">
+        <div class="row">
+            <button id="mobile-up">▲</button>
+        </div>
+        <div class="row">
+            <button id="mobile-left">◀</button>
+            <button id="mobile-down">▼</button>
+            <button id="mobile-right">▶</button>
+        </div>
+    </div>
+
+    <script type="module">
+        document.addEventListener('DOMContentLoaded', () => {
+            // Scene setup
+            let renderer;
+            let player, spider;
+            let keys = {};
+            const playerSpeed = 0.5;
+            const webRadius = 50; // Radius of the web
+            const numRadialStrands = 16;
+            const numConcentricStrands = 8;
+            const sectionRadius = 5; // How close player needs to be to a section point
+
+            // Constants for room dimensions and player start Y
+            const pageRoomSize = 50;
+            const pageWallHeight = 15;
+            const pagePlayerStartY = 2; // Player's normal Y position in page rooms
+
+            const basementSize = 150;
+            const basementWallHeight = 30;
+            const basementPlayerStartY = 2; // Player's normal Y position in basement
+
+            const floorHoleY = -5; // Y-coordinate where player falls through the floor (used only for spider collision)
+            // Door dimensions and collision for vertical doors
+            const doorWidth = 8;
+            const doorHeight = 12;
+            const doorDepth = 0.5; // Thickness of the door
+            const doorCollisionOffsetZ = 2; // How far from the door player can be to collide (into the room)
+
+            // Overall scale factor for the spider
+            const spiderScaleFactor = 0.6;
+
+            // Game state
+            let gameOver = false;
+            let currentSection = 'Start'; // Used for web sections
+            let currentPage = 'web'; // 'web', 'merch', 'concerts', 'music', 'about_us', 'hell'
+            let isGameActive = true; // New: Flag to control game logic based on tab visibility
+
+            // Spider descent animation variables
+            let spiderIsDescending = false;
+            let spiderDescentAccelerated = false; // New flag: true if descent speed has been increased
+            const spiderInitialY = 30; // Starting Y position for descent
+            const spiderTargetY = 1.5 * spiderScaleFactor; // Final Y position on web
+            const spiderDescentSpeedSlow = 0.01; // Dramatically slowed descent speed
+            const spiderDescentSpeedFast = 0.05; // Faster descent speed if player moves
+            const spiderSpeed = 0.08; // Slightly reduced spider chasing speed once on the web
+
+            // New: Spider string
+            let spiderString;
+            const spiderStringTopOffset = 5; // How much higher the string starts above initial spider Y
+
+            // Scene-specific elements
+            let debutAlbumTextSprite1;
+            let debutAlbumTextSprite2;
+
+            // Scenes
+            let gameScene, musicScene, aboutUsScene, gameOverScene; // Removed merchScene, concertsScene
+            let gameCamera; // Only one gameCamera for the web scene, which is not attached to player
+            let pageCamera, gameOverCamera; // These will be attached to the player for first-person view
+
+            // Current active scene and camera
+            let currentActiveScene, currentActiveCamera;
+
+            // Game Over specific elements
+            let gameOverMessageSprite;
+
+            // Mouse look variables
+            let isDragging = false; // Flag to indicate if mouse button is pressed for dragging
+            const mouseSensitivity = 0.002; // Adjust for faster/slower mouse look
+            let cameraPitch = 0; // Vertical rotation (looking up/down)
+            let lastTouchX = 0; // Track last touch position for look around
+            let lastTouchY = 0; // Track last touch position for look around
+
+            // Define sections globally so checkSections can access it
+            const sections = {
+                'Start': new THREE.Vector3(0, 0, 0),
+                'Section A': new THREE.Vector3(webRadius * 0.7, 0, 0),
+                'Section B': new THREE.Vector3(-webRadius * 0.7, 0, 0),
+                'Section C': new THREE.Vector3(0, 0, webRadius * 0.7),
+                'Section D': new THREE.Vector3(0, 0, -webRadius * 0.7),
+            };
+
+            const sectionInfoElement = document.getElementById('section-info');
+            const restartButton = document.getElementById('restart-button');
+            const mouseLookInfoElement = document.getElementById('mouse-look-info');
+
+            // Mobile control elements (now individual buttons)
+            const mobileUpBtn = document.getElementById('mobile-up');
+            const mobileDownBtn = document.getElementById('mobile-down');
+            const mobileLeftBtn = document.getElementById('mobile-left');
+            const mobileRightBtn = document.getElementById('mobile-right');
+
+
+            // Texture Loader
+            const textureLoader = new THREE.TextureLoader();
+
+            // Placeholder Textures (replace with your own high-res textures for best results)
+            const floorTextureUrl = "https://placehold.co/500x500/555555/FFFFFF?text=Floor+Texture";
+            const wallTextureUrl = "https://placehold.co/500x500/777777/FFFFFF?text=Wall+Texture";
+            const doorTextureUrl = "https://placehold.co/100x100/333333/FFFFFF?text=Door"; // New door texture
+            const basementWallTextureUrl = "https://placehold.co/500x500/444444";
+
+            // Lava Texture URLs (using placehold.co for local file system compatibility)
+            const lavaTextureSets = [
+                {
+                    color: "https://placehold.co/200x200/FF4500/FFFFFF?text=Lava+1",
+                    normal: "https://placehold.co/200x200/000000/FFFFFF?text=Normal",
+                    roughness: "https://placehold.co/200x200/808080/FFFFFF?text=Roughness",
+                    displacement: "https://placehold.co/200x200/555555/FFFFFF?text=Disp",
+                    ao: "https://placehold.co/200x200/AAAAAA/FFFFFF?text=AO"
+                },
+                {
+                    color: "https://placehold.co/200x200/FF6347/FFFFFF?text=Lava+2",
+                    normal: "https://placehold.co/200x200/000000/FFFFFF?text=Normal",
+                    roughness: "https://placehold.co/200x200/707070/FFFFFF?text=Roughness",
+                    displacement: "https://placehold.co/200x200/666666/FFFFFF?text=Disp",
+                    ao: "https://placehold.co/200x200/BBBBBB/FFFFFF?text=AO"
+                },
+                {
+                    color: "https://placehold.co/200x200/DC143C/FFFFFF?text=Lava+3",
+                    normal: "https://placehold.co/200x200/000000/FFFFFF?text=Normal",
+                    roughness: "https://placehold.co/200x200/909090/FFFFFF?text=Roughness",
+                    displacement: "https://placehold.co/200x200/444444/FFFFFF?text=Disp",
+                    ao: "https://placehold.co/200x200/CCCCCC/FFFFFF?text=AO"
+                },
+                {
+                    color: "https://placehold.co/200x200/B22222/FFFFFF?text=Lava+4",
+                    normal: "https://placehold.co/200x200/000000/FFFFFF?text=Normal",
+                    roughness: "https://placehold.co/200x200/606060/FFFFFF?text=Roughness",
+                    displacement: "https://placehold.co/200x200/777777/FFFFFF?text=Disp",
+                    ao: "https://placehold.co/200x200/DDDDDD/FFFFFF?text=AO"
+                }
+            ];
+            let lavaMaterials = [];
+
+
+            // Function to create a text sprite
+            function createTextSprite(message, x, y, z, color = '#ffffff', fontSize = 60, scaleFactor = 10, rotationY = 0) {
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                context.font = `${fontSize}px Inter`;
+                context.fillStyle = color;
+                context.textAlign = 'center';
+                context.textBaseline = 'middle';
+
+                // Calculate text dimensions
+                const metrics = context.measureText(message);
+                const textWidth = metrics.width;
+                const textHeight = fontSize * 1.5; // Approximate height
+
+                // Set canvas size based on text dimensions
+                canvas.width = textWidth + 40; // Add padding
+                canvas.height = textHeight + 40;
+
+                // Redraw text with correct canvas size
+                context.font = `${fontSize}px Inter`;
+                context.fillStyle = color;
+                context.textAlign = 'center';
+                context.textBaseline = 'middle';
+                context.fillText(message, canvas.width / 2, canvas.height / 2);
+
+                const texture = new THREE.CanvasTexture(canvas);
+                texture.minFilter = THREE.LinearFilter; // For better scaling
+                texture.needsUpdate = true;
+
+                const material = new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false });
+                const sprite = new THREE.Sprite(material);
+                sprite.position.set(x, y, z);
+                // Adjust scale calculation for better visibility
+                sprite.scale.set(canvas.width * 0.01 * scaleFactor, canvas.height * 0.01 * scaleFactor, 1);
+                sprite.rotation.y = rotationY; // Apply rotation for wall placement
+                return sprite;
+            }
+
+            // Band Website Tabs data (including new page types)
+            const bandTabsData = [
+                { name: 'Merch', position: new THREE.Vector3(webRadius * 0.5, 1, webRadius * 0.3), info: 'Visit our Merch Store!', type: 'external', url: 'https://bedbugguru.bandcamp.com/merch/' }, // Changed to external
+                { name: 'Concerts', position: new THREE.Vector3(-webRadius * 0.4, 1, webRadius * 0.6), info: 'See Upcoming Concerts!', type: 'external', url: 'https://www.songkick.com/artists/10289853-bed-bug-guru/calendar' }, // Changed to external
+                { name: 'Music', position: new THREE.Vector3(webRadius * 0.2, 1, -webRadius * 0.5), info: 'Stream Our Music!', type: 'page', pageName: 'music' },
+                { name: 'About Us', position: new THREE.Vector3(-webRadius * 0.6, 1, -webRadius * 0.2), info: 'Learn About the Band!', type: 'page', pageName: 'about_us' },
+                { name: 'Legacy Site', position: new THREE.Vector3(webRadius * 0.8, 1, -webRadius * 0.1), info: 'Explore our Old Site!', type: 'external', url: 'https://www.bedbugguru.org' },
+            ];
+            let bandTabObjects = [];
+            let activeTab = null; // To track which tab is currently "hovered"
+
+            // Initialize the scene
+            function init() {
+                // Renderer (shared between scenes)
+                renderer = new THREE.WebGLRenderer({ antialias: true });
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.shadowMap.enabled = true; // Enable shadows
+                renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Softer shadows
+                document.body.appendChild(renderer.domElement);
+
+                // --- Game Scene (Spider Web) Setup ---
+                gameScene = new THREE.Scene();
+                gameScene.background = new THREE.Color(0x1a202c);
+
+                // Camera for game scene (not attached to player, fixed view)
+                gameCamera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.1, 1000); // Increased FOV
+                gameCamera.position.set(0, 30, 70);
+                gameCamera.lookAt(0, 0, 0); // Always look at the center of the web
+
+                // Lighting for game scene
+                const gameAmbientLight = new THREE.AmbientLight(0x404040);
+                gameScene.add(gameAmbientLight);
+                const gameDirectionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                gameDirectionalLight.position.set(50, 100, 50);
+                gameDirectionalLight.castShadow = true; // Enable shadow casting
+                gameDirectionalLight.shadow.mapSize.width = 1024; // Shadow map resolution
+                gameDirectionalLight.shadow.mapSize.height = 1024;
+                gameDirectionalLight.shadow.camera.near = 0.5;
+                gameDirectionalLight.shadow.camera.far = 500;
+                gameDirectionalLight.shadow.camera.left = -100;
+                gameDirectionalLight.shadow.camera.right = 100;
+                gameDirectionalLight.shadow.camera.top = 100;
+                gameDirectionalLight.shadow.camera.bottom = -100;
+                gameScene.add(gameDirectionalLight);
+
+                // Create Spider Web for game scene
+                createSpiderWeb(gameScene);
+
+                // Create Player (a Group to hold body and camera)
+                const playerMaterial = new THREE.MeshStandardMaterial({ color: 0x007bff }); // Use MeshStandardMaterial
+                player = new THREE.Group(); // Player is now a group for its body and camera
+                const bodyCylinderHeight = 1.5;
+                const bodyCylinderRadius = 0.8;
+                const bodyCylinderGeometry = new THREE.CylinderGeometry(bodyCylinderRadius, bodyCylinderRadius, bodyCylinderHeight, 32);
+                const bodyCylinder = new THREE.Mesh(bodyCylinderGeometry, playerMaterial);
+                bodyCylinder.position.y = bodyCylinderHeight / 2;
+                bodyCylinder.castShadow = true; // Player casts shadows
+                bodyCylinder.receiveShadow = true; // Player receives shadows
+                player.add(bodyCylinder);
+                const topCapGeometry = new THREE.SphereGeometry(bodyCylinderRadius, 32, 32, 0, Math.PI * 2, 0, Math.PI / 2);
+                const topCap = new THREE.Mesh(topCapGeometry, playerMaterial);
+                topCap.position.y = bodyCylinderHeight;
+                topCap.castShadow = true;
+                topCap.receiveShadow = true;
+                player.add(topCap);
+                const bottomCapGeometry = new THREE.SphereGeometry(bodyCylinderRadius, 32, 32, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2);
+                const bottomCap = new THREE.Mesh(bottomCapGeometry, playerMaterial);
+                bottomCap.position.y = 0;
+                bottomCap.castShadow = true;
+                bottomCap.receiveShadow = true;
+                player.add(bottomCap);
+                const headGeometry = new THREE.SphereGeometry(0.6, 16, 16);
+                const head = new THREE.Mesh(headGeometry, playerMaterial);
+                head.position.y = bodyCylinderHeight + bodyCylinderRadius + 0.3;
+                head.castShadow = true;
+                head.receiveShadow = true;
+                player.add(head);
+                player.position.set(0, 0, 0); // Initial player position on web
+                gameScene.add(player); // Add player to the game scene initially
+
+                // Page Camera (attached to player)
+                pageCamera = new THREE.PerspectiveCamera(80, window.innerWidth / window.innerHeight, 0.1, 100); // Increased FOV
+                pageCamera.position.set(0, pagePlayerStartY + 0.5, 0); // Position camera slightly above player's body
+                player.add(pageCamera); // Add page camera as a child of the player
+
+                // Game Over Camera (attached to player)
+                gameOverCamera = new THREE.PerspectiveCamera(80, window.innerWidth / window.innerHeight, 0.1, 100); // Increased FOV
+                gameOverCamera.position.set(0, basementPlayerStartY + 0.5, 0); // Position camera slightly above player's body
+                player.add(gameOverCamera); // Add game over camera as a child of the player
+
+
+                // Create Spider for game scene
+                const spiderMaterial = new THREE.MeshStandardMaterial({ color: 0x4a2a0a }); // Use MeshStandardMaterial
+                spider = new THREE.Group();
+                const abdomenGeometry = new THREE.SphereGeometry(2.5 * spiderScaleFactor, 32, 16);
+                const abdomen = new THREE.Mesh(abdomenGeometry, spiderMaterial);
+                abdomen.scale.y = 1.2;
+                abdomen.position.z = -2.0 * spiderScaleFactor;
+                abdomen.castShadow = true;
+                abdomen.receiveShadow = true;
+                spider.add(abdomen);
+                const cephalothoraxGeometry = new THREE.SphereGeometry(1.8 * spiderScaleFactor, 32, 16);
+                const cephalothorax = new THREE.Mesh(cephalothoraxGeometry, spiderMaterial);
+                cephalothorax.scale.y = 0.8;
+                cephalothorax.position.z = 0.5 * spiderScaleFactor;
+                cephalothorax.castShadow = true;
+                cephalothorax.receiveShadow = true;
+                spider.add(cephalothorax);
+                const headSpiderGeometry = new THREE.SphereGeometry(0.8 * spiderScaleFactor, 16, 8);
+                const headSpider = new THREE.Mesh(headSpiderGeometry, spiderMaterial);
+                headSpider.scale.y = 0.8;
+                headSpider.position.z = 2.0 * spiderScaleFactor;
+                headSpider.castShadow = true;
+                headSpider.receiveShadow = true;
+                spider.add(headSpider); /* Fixed: Changed headHider to headSpider */
+
+                const eyeGeometry = new THREE.SphereGeometry(0.12 * spiderScaleFactor, 8, 8);
+                const eyeMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
+                const eyePositions = [
+                    new THREE.Vector3(0.3, 0.4, 2.3), new THREE.Vector3(-0.3, 0.4, 2.3),
+                    new THREE.Vector3(0.15, 0.2, 2.4), new THREE.Vector3(-0.15, 0.2, 2.4),
+                    new THREE.Vector3(0.45, 0.2, 2.2), new THREE.Vector3(-0.45, 0.2, 2.2)
+                ];
+                eyePositions.forEach(pos => {
+                    const eye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+                    eye.position.copy(pos.multiplyScalar(spiderScaleFactor));
+                    eye.castShadow = true;
+                    eye.receiveShadow = true;
+                    spider.add(eye);
+                });
+
+                const fangGeometry = new THREE.CylinderGeometry(0.1 * spiderScaleFactor, 0.05 * spiderScaleFactor, 0.8 * spiderScaleFactor, 8);
+                const fangMaterial = new THREE.MeshStandardMaterial({ color: 0x663300 }); // Use MeshStandardMaterial
+                const fang1 = new THREE.Mesh(fangGeometry, fangMaterial);
+                fang1.rotation.x = Math.PI / 2; fang1.rotation.z = Math.PI / 8;
+                fang1.position.set(0.3 * spiderScaleFactor, -0.2 * spiderScaleFactor, 2.8 * spiderScaleFactor);
+                fang1.castShadow = true;
+                fang1.receiveShadow = true;
+                spider.add(fang1);
+                const fang2 = new THREE.Mesh(fangGeometry, fangMaterial);
+                fang2.rotation.x = Math.PI / 2; fang2.rotation.z = -Math.PI / 8;
+                fang2.position.set(-0.3 * spiderScaleFactor, -0.2 * spiderScaleFactor, 2.8 * spiderScaleFactor);
+                fang2.castShadow = true;
+                fang2.receiveShadow = true;
+                spider.add(fang2);
+
+                function createLegSegment(length, thickness, rotationX) {
+                    const segmentGeometry = new THREE.CylinderGeometry(thickness, thickness, length, 8);
+                    const segment = new THREE.Mesh(segmentGeometry, spiderMaterial);
+                    segment.rotation.x = rotationX;
+                    segment.castShadow = true;
+                    segment.receiveShadow = true;
+                    return segment;
+                }
+
+                const legLength1 = 2.0 * spiderScaleFactor;
+                const legLength2 = 2.5 * spiderScaleFactor;
+                const legLength3 = 1.0 * spiderScaleFactor;
+                const legThickness = 0.12 * spiderScaleFactor;
+
+                for (let i = 0; i < 4; i++) {
+                    const legGroup = new THREE.Group();
+                    const segment1 = createLegSegment(legLength1, legThickness, Math.PI / 2);
+                    segment1.position.y = -legLength1 / 2;
+                    legGroup.add(segment1);
+                    const segment2 = createLegSegment(legLength2, legThickness, Math.PI / 2);
+                    segment2.position.y = -legLength1 - legLength2 / 2;
+                    segment2.rotation.z = Math.PI / 3;
+                    legGroup.add(segment2);
+                    const segment3 = createLegSegment(legLength3, legThickness * 0.8, Math.PI / 2);
+                    segment3.position.y = -legLength1 - legLength2 - legLength3 / 2;
+                    segment3.rotation.z = Math.PI / 6;
+                    legGroup.add(segment3);
+
+                    const zOffsets = [1.2, 0.5, -0.5, -1.2];
+                    const xBaseOffset = 1.8;
+                    const angleSpread = Math.PI / 8;
+                    const zOffset = zOffsets[i] * spiderScaleFactor;
+                    const xOffset = (i % 2 === 0 ? xBaseOffset : -xBaseOffset) * spiderScaleFactor;
+
+                    legGroup.position.set(xOffset, 0, zOffset);
+                    legGroup.rotation.y = (i % 2 === 0 ? -1 : 1) * angleSpread * (i < 2 ? 1 : -1);
+                    spider.add(legGroup);
+                }
+                // Initial spider position for descent (will be set relative to player in returnToWeb)
+                spider.position.set(0, spiderInitialY, 0); // Default to (0,0,0) initially, will be updated
+                gameScene.add(spider);
+
+                // Add spider string
+                const stringMaterial = new THREE.LineBasicMaterial({ color: 0x888888, linewidth: 1 });
+                const stringGeometry = new THREE.BufferGeometry();
+                // Initial points for the string (top fixed point, and spider's current position)
+                const initialStringPoints = [
+                    new THREE.Vector3(spider.position.x, spiderInitialY + spiderStringTopOffset, spider.position.z),
+                    spider.position.clone()
+                ];
+                stringGeometry.setFromPoints(initialStringPoints);
+                spiderString = new THREE.Line(stringGeometry, stringMaterial);
+                gameScene.add(spiderString);
+
+
+                // Add band website tabs to game scene
+                bandTabsData.forEach(tabData => {
+                    const tabSprite = createTextSprite(tabData.name, tabData.position.x, tabData.position.y, tabData.position.z);
+                    tabSprite.userData = { ...tabData }; // Store all data for interaction
+                    gameScene.add(tabSprite);
+                    bandTabObjects.push(tabSprite);
+                });
+
+                // Add "DOUBLE SCOOP OUT NOW" text (stationary at the top)
+                // Adjusted y-position, font size, and scale factor
+                debutAlbumTextSprite1 = createTextSprite('DOUBLE SCOOP OUT NOW', 0, 45, 0, '#FFD700', 60, 15); // Gold color, smaller font, higher
+                gameScene.add(debutAlbumTextSprite1);
+
+                // Add "BED BUG GURU'S BRAND NEW DEBUT ALBUM" text (below the first one)
+                // Adjusted y-position, font size, and scale factor
+                debutAlbumTextSprite2 = createTextSprite("BED BUG GURU'S BRAND NEW DEBUT ALBUM", 0, 35, 0, '#FFD700', 40, 15); // Gold color, even smaller font, more separated
+                gameScene.add(debutAlbumTextSprite2);
+
+
+                // --- Music Scene ---
+                musicScene = new THREE.Scene();
+                createPageScene(musicScene, 'OUR MUSIC\n\nAlbum: "Web of Sound"\nSingle: "Silk & Fury"\nEP: "Chitin Beat"', 0x660066, pageRoomSize, pageWallHeight, pagePlayerStartY);
+
+                // --- About Us Scene ---
+                aboutUsScene = new THREE.Scene();
+                createPageScene(aboutUsScene, 'ABOUT THE BAND\n\nFormed in 2023\nGenre: Insect Rock\nMembers: Spinder (Vocals), Beettle (Drums), Mantis (Guitar)', 0x006600, pageRoomSize, pageWallHeight, pagePlayerStartY);
+
+
+                // --- Game Over Scene Setup (Hell Basement) ---
+                gameOverScene = new THREE.Scene();
+                gameOverScene.background = new THREE.Color(0x330000); // Dark red/brown for hellish feel
+
+                // Lighting for game over scene
+                const goAmbientLight = new THREE.AmbientLight(0x550000); // Red ambient
+                gameOverScene.add(goAmbientLight);
+                const goPointLight = new THREE.PointLight(0xff0000, 2, 100); // Red point light
+                goPointLight.position.set(0, 10, 0);
+                goPointLight.castShadow = true; // Enable shadow casting
+                goPointLight.shadow.mapSize.width = 1024;
+                goPointLight.shadow.mapSize.height = 1024;
+                gameOverScene.add(goPointLight);
+
+                // Basement environment - Increased size
+                // Load basement wall texture
+                const basementWallTexture = textureLoader.load(basementWallTextureUrl);
+                basementWallTexture.wrapS = THREE.RepeatWrapping;
+                basementWallTexture.wrapT = THREE.RepeatWrapping;
+                basementWallTexture.repeat.set(5, 1); // Repeat texture
+                basementWallTexture.anisotropy = renderer.capabilities.getMaxAnisotropy(); // Apply anisotropic filtering
+
+                // Load all lava textures and create materials
+                lavaTextureSets.forEach(set => {
+                    const colorMap = textureLoader.load(set.color);
+                    const normalMap = textureLoader.load(set.normal);
+                    const roughnessMap = textureLoader.load(set.roughness);
+                    const displacementMap = textureLoader.load(set.displacement);
+                    const aoMap = textureLoader.load(set.ao);
+
+                    colorMap.wrapS = colorMap.wrapT = THREE.RepeatWrapping;
+                    normalMap.wrapS = normalMap.wrapT = THREE.RepeatWrapping;
+                    roughnessMap.wrapS = roughnessMap.wrapT = THREE.RepeatWrapping;
+                    displacementMap.wrapS = displacementMap.wrapT = THREE.RepeatWrapping;
+                    aoMap.wrapS = aoMap.wrapT = THREE.RepeatWrapping;
+
+                    // Set anisotropic filtering for all lava textures
+                    colorMap.anisotropy = renderer.capabilities.getMaxAnisotropy();
+                    normalMap.anisotropy = renderer.capabilities.getMaxAnisotropy();
+                    roughnessMap.anisotropy = renderer.capabilities.getMaxAnisotropy();
+                    displacementMap.anisotropy = renderer.capabilities.getMaxAnisotropy();
+                    aoMap.anisotropy = renderer.capabilities.getMaxAnisotropy();
+
+                    // Set sRGB encoding for color map
+                    colorMap.encoding = THREE.sRGBEncoding;
+
+                    const lavaMaterial = new THREE.MeshStandardMaterial({
+                        map: colorMap,
+                        normalMap: normalMap,
+                        roughnessMap: roughnessMap,
+                        // Removed displacementMap and set displacementScale to 0 to remove spikes
+                        displacementMap: displacementMap,
+                        displacementScale: 0, // Set to 0 to remove the spikes
+                        aoMap: aoMap,
+                        emissive: new THREE.Color(0xff4500), // Orange-red glow
+                        emissiveIntensity: 0.5 // Adjust intensity of the glow
+                    });
+                    lavaMaterials.push(lavaMaterial);
+                });
+
+                // Create fragmented lava floor
+                const segmentSize = 15; // Size of each square segment
+                const numSegmentsX = basementSize / segmentSize;
+                const numSegmentsZ = basementSize / segmentSize;
+                const floorGeometrySegment = new THREE.PlaneGeometry(segmentSize, segmentSize, 32, 32); // Add segments for displacement
+
+                for (let i = 0; i < numSegmentsX; i++) {
+                    for (let j = 0; j < numSegmentsZ; j++) {
+                        const materialIndex = Math.floor(Math.random() * lavaMaterials.length);
+                        const lavaFloorSegment = new THREE.Mesh(floorGeometrySegment, lavaMaterials[materialIndex]);
+
+                        // Position segments to cover the basement area
+                        lavaFloorSegment.position.x = (i - numSegmentsX / 2 + 0.5) * segmentSize;
+                        lavaFloorSegment.position.z = (j - numSegmentsZ / 2 + 0.5) * segmentSize;
+                        lavaFloorSegment.rotation.x = -Math.PI / 2; // Rotate to be horizontal
+                        lavaFloorSegment.receiveShadow = true;
+                        lavaFloorSegment.castShadow = true; // Segments can also cast shadows
+                        gameOverScene.add(lavaFloorSegment);
+
+                        // Increased texture repetition for more detail
+                        const repeatX = 5 + Math.random() * 2; // Repeat 5 to 7 times
+                        const repeatY = 5 + Math.random() * 2; // Repeat 5 to 7 times
+                        lavaFloorSegment.material.map.repeat.set(repeatX, repeatY);
+                        lavaFloorSegment.material.normalMap.repeat.set(repeatX, repeatY);
+                        lavaFloorSegment.material.roughnessMap.repeat.set(repeatX, repeatY);
+                        lavaFloorSegment.material.displacementMap.repeat.set(repeatX, repeatY);
+                        lavaFloorSegment.material.aoMap.repeat.set(repeatX, repeatY);
+                    }
+                }
+
+
+                // Add an exit door to the basement (instead of a hole)
+                const doorTexture = textureLoader.load(doorTextureUrl);
+                doorTexture.wrapS = THREE.RepeatWrapping;
+                doorTexture.wrapT = THREE.RepeatWrapping;
+                doorTexture.repeat.set(1, 1);
+                doorTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+
+                const basementDoorGeometry = new THREE.BoxGeometry(doorWidth, doorHeight, doorDepth); // Vertical door
+                const basementDoorMaterial = new THREE.MeshStandardMaterial({ map: doorTexture, color: 0x333333 });
+                const basementDoor = new THREE.Mesh(basementDoorGeometry, basementDoorMaterial);
+                // Position on the wall opposite the user's spawn point (z = basementSize / 2)
+                basementDoor.position.set(0, basementPlayerStartY + doorHeight / 2, basementSize / 2 - doorDepth / 2);
+                basementDoor.receiveShadow = true;
+                basementDoor.castShadow = true;
+                gameOverScene.add(basementDoor);
+                gameOverScene.userData.door = basementDoor; // Store door reference
+
+                // Add text for the basement door
+                const basementDoorText = createTextSprite('EXIT TO WEB', basementDoor.position.x, basementDoor.position.y + doorHeight / 2 + 2, basementDoor.position.z);
+                gameOverScene.add(basementDoorText);
+
+
+                const wallMaterial = new THREE.MeshStandardMaterial({ map: basementWallTexture }); // Use texture
+                const wallGeometry = new THREE.BoxGeometry(basementSize, basementWallHeight, 1);
+                const wall1 = new THREE.Mesh(wallGeometry, wallMaterial);
+                wall1.position.set(0, basementWallHeight / 2, -basementSize / 2);
+                wall1.receiveShadow = true;
+                gameOverScene.add(wall1);
+                const wall2 = new THREE.Mesh(wallGeometry, wallMaterial);
+                wall2.position.set(0, basementWallHeight / 2, basementSize / 2);
+                wall2.rotation.y = Math.PI;
+                wall2.receiveShadow = true;
+                gameOverScene.add(wall2);
+                const wall3 = new THREE.Mesh(wallGeometry, wallMaterial);
+                wall3.rotation.y = Math.PI / 2;
+                wall3.position.set(-basementSize / 2, basementWallHeight / 2, 0);
+                wall3.receiveShadow = true;
+                gameOverScene.add(wall3);
+                const wall4 = new THREE.Mesh(wallGeometry, wallMaterial);
+                wall4.rotation.y = -Math.PI / 2;
+                wall4.position.set(basementSize / 2, basementWallHeight / 2, 0);
+                wall4.receiveShadow = true;
+                gameOverScene.add(wall4);
+
+                // People figures (simple boxes for now) - Decreased quantity
+                const personMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 }); // Skin tone - Use MeshStandardMaterial
+                const headGeometryPerson = new THREE.SphereGeometry(1.0, 16, 16);
+                const bodyGeometryPerson = new THREE.BoxGeometry(2, 3, 1);
+
+                const numPeople = 3000; // Decreased people to 3000
+                const spreadRadius = basementSize / 2 - 5; // Spread them within the room, slightly less margin
+
+                for (let i = 0; i < numPeople; i++) {
+                    const person = new THREE.Group();
+                    const head = new THREE.Mesh(headGeometryPerson, personMaterial);
+                    head.position.y = 2.5;
+                    head.castShadow = true;
+                    head.receiveShadow = true;
+                    const body = new THREE.Mesh(bodyGeometryPerson, personMaterial);
+                    body.position.y = 0.5;
+                    body.castShadow = true;
+                    body.receiveShadow = true;
+                    person.add(head);
+                    person.add(body);
+
+                    // Random positions
+                    person.position.x = (Math.random() * 2 - 1) * spreadRadius;
+                    person.position.z = (Math.random() * 2 - 1) * spreadRadius;
+                    person.position.y = 0; // Ensure they are on the floor
+
+                    gameOverScene.add(person);
+                }
+
+
+                // Set initial active scene and camera
+                currentActiveScene = gameScene;
+                currentActiveCamera = gameCamera; // Initially, the gameCamera (fixed view) is active
+
+                // Event Listeners
+                window.addEventListener('resize', onWindowResize);
+                document.addEventListener('keydown', onKeyDown);
+                document.addEventListener('keyup', onKeyUp);
+                restartButton.addEventListener('click', restartGame);
+
+                // Mouse look event listeners (modified for click-and-drag)
+                // Listen for mousedown on the renderer's canvas
+                renderer.domElement.addEventListener('mousedown', (event) => {
+                    // Only enable dragging if not on the web page
+                    if (currentPage !== 'web') {
+                        isDragging = true;
+                    }
+                });
+                // Listen for mouseup on the document to catch releases outside the canvas
+                document.addEventListener('mouseup', () => {
+                    if (isDragging) { // Only reset if dragging was active
+                        isDragging = false;
+                    }
+                });
+                // Mousemove listener is always active but its effect is conditional
+                document.addEventListener('mousemove', onMouseMove);
+
+                // Mobile Touch Controls (individual buttons)
+                mobileUpBtn.addEventListener('touchstart', (e) => { e.preventDefault(); keys['KeyW'] = true; console.log('Up touchstart'); }, { passive: false });
+                mobileUpBtn.addEventListener('touchend', (e) => { e.preventDefault(); keys['KeyW'] = false; console.log('Up touchend'); });
+                mobileDownBtn.addEventListener('touchstart', (e) => { e.preventDefault(); keys['KeyS'] = true; console.log('Down touchstart'); }, { passive: false });
+                mobileDownBtn.addEventListener('touchend', (e) => { e.preventDefault(); keys['KeyS'] = false; console.log('Down touchend'); });
+                mobileLeftBtn.addEventListener('touchstart', (e) => { e.preventDefault(); keys['KeyA'] = true; console.log('Left touchstart'); }, { passive: false });
+                mobileLeftBtn.addEventListener('touchend', (e) => { e.preventDefault(); keys['KeyA'] = false; console.log('Left touchend'); });
+                mobileRightBtn.addEventListener('touchstart', (e) => { e.preventDefault(); keys['KeyD'] = true; console.log('Right touchstart'); }, { passive: false });
+                mobileRightBtn.addEventListener('touchend', (e) => { e.preventDefault(); keys['KeyD'] = false; console.log('Right touchend'); });
+
+                // Touch look around for mobile (on the canvas itself)
+                renderer.domElement.addEventListener('touchstart', (e) => {
+                    // Only enable touch look if not on the web page and only one touch
+                    // Also, ensure touch is not on a mobile control button
+                    const targetTagName = e.target.tagName.toLowerCase();
+                    if (currentPage !== 'web' && e.touches.length === 1 && targetTagName !== 'button') {
+                        isDragging = true;
+                        lastTouchX = e.touches[0].clientX;
+                        lastTouchY = e.touches[0].clientY;
+                        e.preventDefault(); // Prevent scrolling/zooming
+                    }
+                }, { passive: false });
+
+                renderer.domElement.addEventListener('touchmove', (e) => {
+                    if (isDragging && currentPage !== 'web' && e.touches.length === 1) {
+                        const touchX = e.touches[0].clientX;
+                        const touchY = e.touches[0].clientY;
+                        const movementX = touchX - lastTouchX;
+                        const movementY = touchY - lastTouchY;
+
+                        player.rotation.y -= movementX * mouseSensitivity;
+
+                        cameraPitch -= movementY * mouseSensitivity;
+                        cameraPitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, cameraPitch));
+                        if (currentActiveCamera === pageCamera || currentActiveCamera === gameOverCamera) {
+                            currentActiveCamera.rotation.x = cameraPitch;
+                        }
+                        lastTouchX = touchX;
+                        lastTouchY = touchY;
+                        e.preventDefault(); // Prevent scrolling/zooming
+                    }
+                }, { passive: false });
+
+                renderer.domElement.addEventListener('touchend', () => {
+                    isDragging = false;
+                });
+
+
+                // New: Add visibility change listener
+                document.addEventListener('visibilitychange', handleVisibilityChange);
+
+
+                // Initial UI update
+                updateSectionInfo();
+            }
+
+            // New: Handle tab visibility changes
+            function handleVisibilityChange() {
+                if (document.hidden) {
+                    // Tab is hidden, pause game logic
+                    isGameActive = false;
+                    // Reset spider to center of web and prepare for descent
+                    // Spider's horizontal position is now tied to player's initial position
+                    spider.position.set(player.position.x, spiderInitialY, player.position.z);
+                    spiderIsDescending = true; // Ensure descent animation restarts
+                    spiderDescentAccelerated = false; // Reset acceleration for next descent
+
+                    // If on web, reset player to center too
+                    if (currentPage === 'web') {
+                        player.position.set(0, 0, 0);
+                    }
+                    // Clear any active key presses to prevent phantom movement
+                    keys = {};
+                    isDragging = false; // Stop dragging if tab loses focus
+                    renderer.domElement.style.cursor = 'default'; // Ensure cursor is default
+                    console.log("Game paused: Tab hidden.");
+                } else {
+                    // Tab is visible, resume game logic
+                    isGameActive = true;
+                    console.log("Game resumed: Tab visible.");
+                }
+            }
+
+            // Handle mouse movement for looking around
+            function onMouseMove(event) {
+                // Only rotate if mouse button is down AND we are not on the web page
+                if (!isDragging || currentPage === 'web') return; 
+
+                const movementX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
+                const movementY = event.movementY || event.mozMovementY || event.webkitMovementY || 0;
+
+                // Rotate player horizontally (yaw)
+                player.rotation.y -= movementX * mouseSensitivity;
+
+                // Rotate camera vertically (pitch) - applies to the active first-person camera
+                cameraPitch -= movementY * mouseSensitivity;
+                cameraPitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, cameraPitch)); // Clamp pitch
+                if (currentActiveCamera === pageCamera || currentActiveCamera === gameOverCamera) {
+                    currentActiveCamera.rotation.x = cameraPitch;
+                }
+            }
+
+
+            // Creates a generic page scene (for Music, About Us)
+            function createPageScene(sceneObj, textContent, bgColor, roomSize, wallHeight, playerStartY) {
+                sceneObj.background = new THREE.Color(bgColor);
+
+                const ambientLight = new THREE.AmbientLight(0x404040);
+                sceneObj.add(ambientLight);
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                directionalLight.position.set(0, 10, 10);
+                directionalLight.castShadow = true; // Enable shadow casting
+                directionalLight.shadow.mapSize.width = 1024;
+                directionalLight.shadow.mapSize.height = 1024;
+                sceneObj.add(directionalLight);
+
+                // Floor
+                // Load page floor texture
+                const pageFloorTexture = textureLoader.load(floorTextureUrl);
+                pageFloorTexture.wrapS = THREE.RepeatWrapping;
+                pageFloorTexture.wrapT = THREE.RepeatWrapping;
+                pageFloorTexture.repeat.set(2, 2); // Repeat texture
+                pageFloorTexture.anisotropy = renderer.capabilities.getMaxAnisotropy(); // Apply anisotropic filtering
+
+                const floorMaterial = new THREE.MeshStandardMaterial({ map: pageFloorTexture }); // Use texture
+                const floorGeometry = new THREE.PlaneGeometry(roomSize, roomSize);
+                const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+                floor.rotation.x = -Math.PI / 2;
+                floor.receiveShadow = true; // Floor receives shadows
+                sceneObj.add(floor);
+
+                // Add an exit door to the page (on the wall)
+                const doorTexture = textureLoader.load(doorTextureUrl);
+                doorTexture.wrapS = THREE.RepeatWrapping;
+                doorTexture.wrapT = THREE.RepeatWrapping;
+                doorTexture.repeat.set(1, 1);
+                doorTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+
+                const doorGeometry = new THREE.BoxGeometry(doorWidth, doorHeight, doorDepth); // Vertical door
+                const doorMaterial = new THREE.MeshStandardMaterial({ map: doorTexture, color: 0x333333 });
+                const door = new THREE.Mesh(doorGeometry, doorMaterial);
+                // Position on the wall opposite the user's spawn point (z = roomSize / 2)
+                door.position.set(0, playerStartY + doorHeight / 2, roomSize / 2 - doorDepth / 2);
+                door.receiveShadow = true;
+                door.castShadow = true;
+                sceneObj.add(door);
+                sceneObj.userData.door = door; // Store door reference
+
+                // Add text for the door
+                const doorText = createTextSprite('EXIT TO WEB', door.position.x, door.position.y + doorHeight / 2 + 2, door.position.z);
+                sceneObj.add(doorText);
+
+
+                // Walls (simple box around the space)
+                // Load page wall texture
+                const pageWallTexture = textureLoader.load(wallTextureUrl);
+                pageWallTexture.wrapS = THREE.RepeatWrapping;
+                pageWallTexture.wrapT = THREE.RepeatWrapping;
+                pageWallTexture.repeat.set(2, 1); // Repeat texture
+                pageWallTexture.anisotropy = renderer.capabilities.getMaxAnisotropy(); // Apply anisotropic filtering
+
+                const wallMaterial = new THREE.MeshStandardMaterial({ map: pageWallTexture }); // Use texture
+                const wallThickness = 0.5;
+
+                const wall1 = new THREE.Mesh(new THREE.BoxGeometry(roomSize, wallHeight, wallThickness), wallMaterial);
+                wall1.position.set(0, wallHeight / 2, -roomSize / 2);
+                wall1.receiveShadow = true;
+                sceneObj.add(wall1);
+
+                const wall2 = new THREE.Mesh(new THREE.BoxGeometry(roomSize, wallHeight, wallThickness), wallMaterial);
+                wall2.position.set(0, wallHeight / 2, roomSize / 2);
+                wall2.rotation.y = Math.PI; // Face inwards
+                wall2.receiveShadow = true;
+                sceneObj.add(wall2);
+
+                const wall3 = new THREE.Mesh(new THREE.BoxGeometry(roomSize, wallHeight, wallThickness), wallMaterial);
+                wall3.position.set(-roomSize / 2, wallHeight / 2, 0);
+                wall3.rotation.y = Math.PI / 2;
+                wall3.receiveShadow = true;
+                sceneObj.add(wall3);
+
+                const wall4 = new THREE.Mesh(new THREE.BoxGeometry(roomSize, wallHeight, wallThickness), wallMaterial);
+                wall4.position.set(roomSize / 2, wallHeight / 2, 0);
+                wall4.rotation.y = -Math.PI / 2;
+                wall4.receiveShadow = true;
+                sceneObj.add(wall4);
+
+                // Text content - decreased font size and increased scale for better visibility
+                // Ensure text sprites are added directly to the scene and not affected by player rotation
+                const contentSprite = createTextSprite(textContent, 0, wallHeight / 2, -roomSize / 2 + 0.1, '#ffffff', 20, 20); // Decreased font size, increased scale
+                sceneObj.add(contentSprite);
+            }
+
+            // Create the spider web
+            function createSpiderWeb(targetScene) {
+                const webMaterial = new THREE.LineBasicMaterial({ color: 0xaaaaaa, linewidth: 2 }); // Grey lines
+
+                // Radial strands
+                for (let i = 0; i < numRadialStrands; i++) {
+                    const angle = (i / numRadialStrands) * Math.PI * 2;
+                    const endPoint = new THREE.Vector3(webRadius * Math.cos(angle), 0, webRadius * Math.sin(angle));
+                    const points = [new THREE.Vector3(0, 0, 0), endPoint];
+                    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+                    const line = new THREE.Line(geometry, webMaterial);
+                    targetScene.add(line);
+                }
+
+                // Concentric strands (spiral-like for a more natural look)
+                const spiralTurns = 8;
+                const spiralPoints = [];
+                for (let i = 0; i <= numConcentricStrands * 30; i++) {
+                    const t = i / (numConcentricStrands * 30);
+                    const r = webRadius * t;
+                    const angle = spiralTurns * Math.PI * 2 * t;
+                    spiralPoints.push(new THREE.Vector3(r * Math.cos(angle), 0, r * Math.sin(angle)));
+                }
+                const spiralGeometry = new THREE.BufferGeometry().setFromPoints(spiralPoints);
+                const spiralLine = new THREE.Line(spiralGeometry, webMaterial);
+                targetScene.add(spiralLine);
+
+                // Add some "dew drops" or connection points
+                const dewDropGeometry = new THREE.SphereGeometry(0.2, 8, 8);
+                const dewDropMaterial = new THREE.MeshBasicMaterial({ color: 0xadd8e6, transparent: true, opacity: 0.6 });
+                for (let i = 0; i < numRadialStrands; i++) {
+                    for (let j = 1; j <= numConcentricStrands; j++) {
+                        const r = (j / numConcentricStrands) * webRadius;
+                        const angle = (i / numRadialStrands) * Math.PI * 2;
+                        const dewDrop = new THREE.Mesh(dewDropGeometry, dewDropMaterial);
+                        dewDrop.position.set(r * Math.cos(angle), 0, r * Math.sin(angle));
+                        targetScene.add(dewDrop);
+                    }
+                }
+            }
+
+            // Handle window resize
+            function onWindowResize() {
+                gameCamera.aspect = window.innerWidth / window.innerHeight;
+                gameCamera.updateProjectionMatrix();
+
+                pageCamera.aspect = window.innerWidth / window.innerHeight;
+                pageCamera.updateProjectionMatrix();
+
+                gameOverCamera.aspect = window.innerWidth / window.innerHeight;
+                gameOverCamera.updateProjectionMatrix();
+
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+
+            // Handle key presses
+            function onKeyDown(event) {
+                keys[event.code] = true;
+            }
+
+            function onKeyUp(event) {
+                keys[event.code] = false;
+            }
+
+            // Update game state and render
+            function animate() {
+                requestAnimationFrame(animate);
+
+                // Only update game logic if the tab is active
+                if (!isGameActive) {
+                    renderer.render(currentActiveScene, currentActiveCamera);
+                    return;
+                }
+
+                const moveDirection = new THREE.Vector3();
+                const currentSpeed = playerSpeed;
+
+                if (keys['KeyW'] || keys['ArrowUp']) moveDirection.z -= 1;
+                if (keys['KeyS'] || keys['ArrowDown']) moveDirection.z += 1;
+                if (keys['KeyA'] || keys['ArrowLeft']) moveDirection.x -= 1;
+                if (keys['KeyD'] || keys['ArrowRight']) moveDirection.x += 1;
+
+                if (currentPage !== 'web') { // In any room (Music, About Us, Hell)
+                    const currentRoomHalfSize = (currentPage === 'hell' ? basementSize : pageRoomSize) / 2 - 1; // -1 for margin
+                    const currentRoomPlayerStartY = (currentPage === 'hell' ? basementPlayerStartY : pagePlayerStartY);
+                    
+                    // Player's Y position is always at the floor level in rooms
+                    player.position.y = currentRoomPlayerStartY;
+
+                    // Check for door collision in rooms
+                    const door = currentActiveScene.userData.door;
+                    if (door) {
+                        // Create bounding box for the player
+                        const playerBox = new THREE.Box3().setFromObject(player);
+                        
+                        // Create bounding box for the door
+                        const doorBox = new THREE.Box3().setFromObject(door);
+                        
+                        // Expand the door's collision box to make it easier to hit
+                        // The door is on the positive Z wall, so expand towards negative Z (into the room)
+                        const expandedDoorBox = doorBox.clone();
+                        expandedDoorBox.min.z -= doorCollisionOffsetZ; // Expand towards player's approach
+
+                        if (playerBox.intersectsBox(expandedDoorBox)) {
+                            returnToWeb(); // Transition back to the web
+                            return; // Stop further movement for this frame to prevent multiple triggers
+                        }
+                    }
+
+                    // Apply movement relative to player's current horizontal rotation
+                    if (moveDirection.lengthSq() > 0) {
+                        const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(player.quaternion);
+                        const right = new THREE.Vector3(1, 0, 0).applyQuaternion(player.quaternion);
+
+                        const finalMove = new THREE.Vector3();
+                        if (keys['KeyW'] || keys['ArrowUp']) finalMove.add(forward);
+                        if (keys['KeyS'] || keys['ArrowDown']) finalMove.sub(forward);
+                        if (keys['KeyA'] || keys['ArrowLeft']) finalMove.sub(right);
+                        if (keys['KeyD'] || keys['ArrowRight']) finalMove.add(right);
+
+                        finalMove.normalize().multiplyScalar(currentSpeed);
+                        player.position.add(finalMove);
+
+                        // Clamp player position within room boundaries
+                        player.position.x = Math.max(-currentRoomHalfSize, Math.min(currentRoomHalfSize, player.position.x));
+                        player.position.z = Math.max(-currentRoomHalfSize, Math.min(currentRoomHalfSize, player.position.z));
+                    }
+
+                } else if (currentPage === 'web') {
+                    // Web exploration (player movement, spider, tabs)
+                    if (moveDirection.lengthSq() > 0) {
+                        moveDirection.normalize().multiplyScalar(currentSpeed);
+                        player.position.add(moveDirection);
+
+                        // Keep player within web bounds (circular)
+                        const distance = player.position.distanceTo(new THREE.Vector3(0, player.position.y, 0));
+                        if (distance > webRadius) {
+                            player.position.normalize().multiplyScalar(webRadius);
+                            player.position.y = 0;
+                        }
+                    }
+                    player.position.y = 0; // Always on the web surface
+
+                    // No movement for debutAlbumTextSprite1 and debutAlbumTextSprite2 as requested
+                    // They remain stationary at their set positions (0, 45, 0) and (0, 35, 0)
+
+                    // Determine current descent speed
+                    let currentDescentSpeed = spiderDescentSpeedSlow;
+                    // If player moves while spider is descending, accelerate its descent permanently for this cycle
+                    if (spiderIsDescending && !spiderDescentAccelerated && (keys['KeyW'] || keys['ArrowUp'] || keys['KeyS'] || keys['ArrowDown'] || keys['KeyA'] || keys['KeyD'])) { // Check for any movement key
+                        spiderDescentAccelerated = true;
+                    }
+                    if (spiderDescentAccelerated) {
+                        currentDescentSpeed = spiderDescentSpeedFast;
+                    }
+
+                    // Spider descent logic
+                    if (spiderIsDescending) {
+                        if (spider.position.y > spiderTargetY) {
+                            spider.position.y = Math.max(spiderTargetY, spider.position.y - currentDescentSpeed); // Use conditional speed
+                            // Update string end point
+                            spiderString.geometry.attributes.position.setY(1, spider.position.y);
+                            spiderString.geometry.attributes.position.needsUpdate = true;
+                        } else {
+                            spider.position.y = spiderTargetY;
+                            spiderIsDescending = false;
+                            spiderDescentAccelerated = false; // Reset acceleration for next descent
+                            // Ensure string is correctly positioned at the end
+                            spiderString.geometry.attributes.position.setY(1, spider.position.y);
+                            spiderString.geometry.attributes.position.needsUpdate = true;
+                        }
+                        // Update string top point to follow spider's horizontal movement
+                        spiderString.geometry.attributes.position.setX(0, spider.position.x);
+                        spiderString.geometry.attributes.position.setZ(0, spider.position.z);
+                        spiderString.geometry.attributes.position.setX(1, spider.position.x); // Ensure spider's horizontal position is also updated on string
+                        spiderString.geometry.attributes.position.setZ(1, spider.position.z);
+                        spiderString.geometry.attributes.position.needsUpdate = true;
+
+                    } else {
+                        // Spider chasing player (only when not descending)
+                        const spiderDirection = new THREE.Vector3().subVectors(player.position, spider.position).normalize();
+                        spider.position.add(spiderDirection.multiplyScalar(spiderSpeed)); // Use new spiderSpeed
+                        spider.position.y = spiderTargetY; // Ensure it stays at target Y
+
+                        // Update string to follow spider on the web
+                        spiderString.geometry.attributes.position.setX(0, spider.position.x);
+                        spiderString.geometry.attributes.position.setZ(0, spider.position.z);
+                        spiderString.geometry.attributes.position.setY(1, spider.position.y);
+                        spiderString.geometry.attributes.position.setX(1, spider.position.x);
+                        spiderString.geometry.attributes.position.setZ(1, spider.position.z);
+                        spiderString.geometry.attributes.position.needsUpdate = true;
+                    }
+
+                    // Collision detection (spider and player) - only if spider is not descending
+                    if (!spiderIsDescending) {
+                        const playerBox = new THREE.Box3().setFromObject(player);
+                        const spiderBox = new THREE.Box3().setFromObject(spider);
+
+                        if (playerBox.intersectsBox(spiderBox)) {
+                            enterHell();
+                        }
+                    }
+
+                    checkSections();
+                    checkBandTabs();
+
+                    // Camera for web scene: fixed view, not affected by player's horizontal rotation
+                    // The player's model still rotates, but the camera itself is static.
+                    gameCamera.position.set(0, 30, 70);
+                    gameCamera.lookAt(0, 0, 0);
+                }
+
+                // --- Universal Fall Through Floor Check (only for spider collision leading to hell) ---
+                if (currentPage === 'hell' && player.position.y < floorHoleY) {
+                    // This condition is now only met if the player is falling into the lava in hell
+                    // No need to returnToWeb here, as they are already in hell.
+                    // This prevents an infinite loop if returnToWeb() also triggers this.
+                }
+
+                renderer.render(currentActiveScene, currentActiveCamera);
+            }
+
+            // Check if player reached a section on the main web
+            function checkSections() {
+                for (const sectionName in sections) {
+                    const sectionPos = sections[sectionName];
+                    const distance = player.position.distanceTo(sectionPos);
+
+                    if (distance < sectionRadius) {
+                        if (currentSection !== sectionName) {
+                            currentSection = sectionName;
+                            updateSectionInfo();
+                            console.log(`Reached ${sectionName}!`);
+                        }
+                        return;
+                    }
+                }
+                // If not in any specific web section, default to 'Web'
+                if (currentSection !== 'Web' && currentPage === 'web') {
+                    currentSection = 'Web';
+                    updateSectionInfo();
+                }
+            }
+
+            // Helper function to get domain from URL
+            function getDomainFromUrl(url) {
+                try {
+                    const hostname = new URL(url).hostname;
+                    // Remove 'www.' if present
+                    return hostname.startsWith('www.') ? hostname.substring(4) : hostname;
+                } catch (e) {
+                    return "external site"; // Fallback for invalid URLs
+                }
+            }
+
+            // Check for band tab hover on the main web
+            function checkBandTabs() {
+                let hoveredTab = null;
+                const collisionPadding = 1.0; // Add a small padding to the collision box
+
+                bandTabObjects.forEach(tabSprite => {
+                    // Calculate the effective bounding box for the sprite in the XZ plane
+                    const spriteHalfWidth = tabSprite.scale.x / 2;
+                    const spriteHalfHeight = tabSprite.scale.y / 2; // Using height for Z extent
+
+                    const minX = tabSprite.position.x - spriteHalfWidth - collisionPadding;
+                    const maxX = tabSprite.position.x + spriteHalfWidth + collisionPadding;
+                    const minZ = tabSprite.position.z - spriteHalfHeight - collisionPadding;
+                    const maxZ = tabSprite.position.z + spriteHalfHeight + collisionPadding;
+
+                    // Check if player's X and Z coordinates are within the sprite's bounds
+                    if (player.position.x >= minX && player.position.x <= maxX &&
+                        player.position.z >= minZ && player.position.z <= maxZ) {
+                        hoveredTab = tabSprite.userData;
+                    }
+                });
+
+                if (hoveredTab) {
+                    if (activeTab !== hoveredTab.name) {
+                        activeTab = hoveredTab.name;
+                        const infoBox = document.getElementById('info-box');
+                        infoBox.innerHTML = `<p>${hoveredTab.info}</p>`; // Update info box
+
+                        // If it's a page type, transition to that page
+                        if (hoveredTab.type === 'page') {
+                            enterPage(hoveredTab.pageName);
+                        } else if (hoveredTab.type === 'external') {
+                            // For external link, offer to open with less precise URL
+                            const siteName = getDomainFromUrl(hoveredTab.url);
+                            showCustomModal(`Do you want to visit ${siteName}?`, () => {
+                                window.open(hoveredTab.url, '_blank');
+                                // No additional logic needed here for onConfirm, showCustomModal handles returnToWeb()
+                            }, () => { // Cancel callback
+                                // No additional logic needed here, showCustomModal handles resuming game and UI update
+                            });
+                        }
+                    }
+                } else if (activeTab !== null) {
+                    activeTab = null;
+                    updateSectionInfo(); // Revert info box to section info
+                }
+            }
+
+            // Custom Modal for confirmations (replaces alert/confirm)
+            function showCustomModal(message, onConfirm, onCancel) {
+                // Pause game logic when modal appears
+                isGameActive = false;
+                // Clear any active key presses to prevent phantom movement
+                keys = {};
+                // Stop dragging
+                isDragging = false;
+                renderer.domElement.style.cursor = 'default'; // Ensure cursor is default
+
+                const modalId = 'custom-modal';
+                let modal = document.getElementById(modalId);
+                if (!modal) {
+                    modal = document.createElement('div');
+                    modal.id = modalId;
+                    modal.style.cssText = `
+                        position: fixed;
+                        top: 50%;
+                        left: 50%;
+                        transform: translate(-50%, -50%);
+                        background-color: rgba(0, 0, 0, 0.9);
+                        color: white;
+                        padding: 25px;
+                        border-radius: 10px;
+                        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+                        z-index: 1000;
+                        text-align: center;
+                        font-size: 1.1em;
+                        display: flex;
+                        flex-direction: column;
+                        gap: 15px;
+                        max-width: 80%;
+                    `;
+                    document.body.appendChild(modal);
+                }
+
+                modal.innerHTML = `
+                    <p>${message}</p>
+                    <div style="display: flex; justify-content: center; gap: 15px;">
+                        <button id="modal-confirm-btn" style="background-color: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">Yes</button>
+                        <button id="modal-cancel-btn" style="background-color: #f44336; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">No</button>
+                    </div>
+                `;
+                modal.style.display = 'flex';
+
+                document.getElementById('modal-confirm-btn').onclick = () => {
+                    if (onConfirm) onConfirm();
+                    returnToWeb(); // Always return to web after a confirmed external link interaction
+                    modal.remove(); // Remove the modal element from the DOM
+                };
+                document.getElementById('modal-cancel-btn').onclick = () => {
+                    if (onCancel) onCancel(); // Execute any custom cancel logic
+                    returnToWeb(); // Return to web to resume game and reset state
+                    modal.remove(); // Remove the modal element from the DOM
+                };
+            }
+
+
+            // Update UI with current section/page info
+            function updateSectionInfo() {
+                if (currentPage === 'web') {
+                    sectionInfoElement.textContent = `Current Section: ${currentSection}`;
+                } else if (currentPage === 'hell') {
+                    sectionInfoElement.textContent = `Current Location: The Basement`;
+                } else {
+                    // Capitalize first letter for display
+                    const displayName = currentPage.charAt(0).toUpperCase() + currentPage.slice(1);
+                    sectionInfoElement.textContent = `Current Page: ${displayName}`;
+                }
+            }
+
+            // Transition to a page scene
+            function enterPage(pageName) {
+                currentPage = pageName;
+                gameOver = false; // Ensure game over state is off
+                restartButton.style.display = 'block'; // Show restart button
+                restartButton.textContent = 'Back to Site'; // Change button text
+                mouseLookInfoElement.style.display = 'block'; // Show mouse look info
+
+                // Detach player from gameScene (and its camera)
+                gameScene.remove(player);
+                gameScene.remove(spider); // Make sure spider is not active on pages
+                if (spiderString) gameScene.remove(spiderString); // Remove string from game scene
+                if (debutAlbumTextSprite1) gameScene.remove(debutAlbumTextSprite1); // Remove text from game scene
+                if (debutAlbumTextSprite2) gameScene.remove(debutAlbumTextSprite2); // Remove text from game scene
+
+
+                // Player spawns further back from the entrance, facing the door
+                player.position.set(0, pagePlayerStartY, -pageRoomSize / 2 + 5); 
+                player.rotation.y = Math.PI; // Player faces the opposite wall (where the door is)
+
+                // Reset camera pitch when entering a new page
+                cameraPitch = 0;
+                pageCamera.rotation.x = 0; // Reset local camera rotation
+
+                switch (pageName) {
+                    case 'music': // Only Music and About Us are page types now
+                        currentActiveScene = musicScene;
+                        currentActiveCamera = pageCamera; // Set pageCamera as active
+                        break;
+                    case 'about_us':
+                        currentActiveScene = aboutUsScene;
+                        currentActiveCamera = pageCamera;
+                        break;
+                    default:
+                        currentActiveScene = gameScene; // Fallback
+                        currentActiveCamera = gameCamera; // Fallback to gameCamera
+                        currentPage = 'web'; // Should not happen if logic is correct
+                }
+                currentActiveScene.add(player); // Add player (and its child camera) to the new scene
+                document.getElementById('info-box').style.display = 'none'; // Hide general info in rooms
+                updateSectionInfo();
+                activeTab = null; // Reset activeTab after entering a page
+                console.log(`Entered ${pageName} page!`);
+            }
+
+            // Transition to hell scene (Game Over)
+            function enterHell() {
+                gameOver = true;
+                currentPage = 'hell';
+                restartButton.style.display = 'block'; // Show restart button
+                restartButton.textContent = 'Back to Site'; // Change button text
+                mouseLookInfoElement.style.display = 'block'; // Show mouse look info
+                sectionInfoElement.textContent = `Current Location: The Basement`; // Override info box
+
+                // Detach player from gameScene (and its camera)
+                gameScene.remove(player);
+                gameScene.remove(spider);
+                if (spiderString) gameScene.remove(spiderString); // Remove string from game scene
+                if (debutAlbumTextSprite1) gameScene.remove(debutAlbumTextSprite1); // Remove text from game scene
+                if (debutAlbumTextSprite2) gameScene.remove(debutAlbumTextSprite2); // Remove text from game scene
+
+
+                // Add player to gameOverScene and set starting position
+                player.position.set(0, basementPlayerStartY, -basementSize / 2 + 5); // Player spawns further back
+                player.rotation.y = Math.PI; // Player faces the opposite wall (where the door is)
+
+                // Reset camera pitch when entering hell
+                cameraPitch = 0;
+                gameOverCamera.rotation.x = 0; // Reset local camera rotation
+
+
+                // Add game over message to the wall
+                gameOverMessageSprite = createTextSprite(
+                    'YOU ARE IN HELL! ENJOY THE NEW BBG ALBUM', // Updated text
+                    0, // X position
+                    basementWallHeight / 2 + 10, // Y position (higher on the wall)
+                    -basementSize / 2 + 0.1, // Z position (just in front of the back wall)
+                    '#ff0000', // Red color for game over
+                    40, // Adjusted font size
+                    1 // Adjusted scale factor
+                );
+                gameOverScene.add(gameOverMessageSprite);
+
+
+                currentActiveScene = gameOverScene;
+                currentActiveCamera = gameOverCamera; // Set gameOverCamera as active
+                document.getElementById('info-box').style.display = 'none'; // Hide general info in rooms
+                activeTab = null; // Reset activeTab after entering hell
+                console.log("Game Over! The spider caught you. Welcome to the insect rock concert!");
+                // Optional: Play heavy rock music here if allowed by environment (e.g., using Tone.js for synthesized sounds)
+                // For example:
+                // if (typeof Tone !== 'undefined') {
+                //     const synth = new Tone.Synth().toDestination();
+                //     synth.triggerAttackRelease("C2", "8n");
+                // }
+            }
+
+            // Get scene object based on page name
+            function getSceneForPage(pageName) {
+                switch (pageName) {
+                    case 'music': return musicScene;
+                    case 'about_us': return aboutUsScene;
+                    case 'hell': return gameOverScene;
+                    default: return gameScene; // Fallback
+                }
+            }
+
+            // Return to the main spider web
+            function returnToWeb() {
+                gameOver = false; // Reset game over state
+                currentPage = 'web';
+                restartButton.style.display = 'none'; // Hide restart button
+                restartButton.textContent = 'Back to Site'; // Reset button text
+                mouseLookInfoElement.style.display = 'none'; // Hide mouse look info
+                isDragging = false; // Ensure dragging is off when returning to web
+                renderer.domElement.style.cursor = 'default'; // Reset cursor to default
+
+                // Remove player from current scene (could be any page or hell)
+                currentActiveScene.remove(player);
+
+                // Remove game over message if it exists
+                if (gameOverMessageSprite) {
+                    gameOverScene.remove(gameOverMessageSprite);
+                    gameOverMessageSprite = null;
+                }
+
+                // Add player and spider back to gameScene
+                gameScene.add(player);
+                gameScene.add(spider);
+                if (spiderString) gameScene.add(spiderString); // Add string back to game scene
+                if (debutAlbumTextSprite1) gameScene.add(debutAlbumTextSprite1); // Add text back to game scene
+                if (debutAlbumTextSprite2) gameScene.add(debutAlbumTextSprite2); // Add text back to game scene
+
+
+                player.position.set(0, 0, 0); // Reset player position on web
+                // Spider starts directly above the player's current position
+                spider.position.set(player.position.x, spiderInitialY, player.position.z);
+                spiderIsDescending = true; // Start descent animation
+                spiderDescentAccelerated = false; // Reset acceleration for next descent
+
+                // Initialize string position when returning to web
+                if (spiderString) {
+                    spiderString.geometry.attributes.position.setX(0, spider.position.x);
+                    spiderString.geometry.attributes.position.setZ(0, spider.position.z);
+                    spiderString.geometry.attributes.position.setY(0, spiderInitialY + spiderStringTopOffset);
+                    spiderString.geometry.attributes.position.setX(1, spider.position.x);
+                    spiderString.geometry.attributes.position.setZ(1, spider.position.z);
+                    spiderString.geometry.attributes.position.setY(1, spider.position.y); // Spider's initial y for descent
+                    spiderString.geometry.attributes.position.needsUpdate = true;
+                }
+
+                // Reset player's horizontal rotation and camera pitch when returning to web
+                player.rotation.y = 0;
+                cameraPitch = 0;
+                // The gameCamera (web view) is not a child of player, so no local rotation to reset on it.
+
+                currentActiveScene = gameScene;
+                currentActiveCamera = gameCamera; // Set gameCamera as active
+                currentSection = 'Start'; // Reset web section
+                document.getElementById('info-box').style.display = 'block'; // Show general info on web
+                updateSectionInfo();
+                activeTab = null; // Reset activeTab when returning to web
+                isGameActive = true; // Ensure game is active after returning to web
+                console.log("Returned to the Spider Web!");
+            }
+
+            // Restart the entire game
+            function restartGame() {
+                // This function effectively just calls returnToWeb, as the game over state is now explorable
+                returnToWeb();
+            }
+
+            // Update section info display
+            function updateSectionInfo() {
+                sectionInfoElement.textContent = `Current Section: ${currentSection}`;
+                if (activeTab) {
+                    // If a tab is active, info box will be handled by checkBandTabs
+                } else {
+                    document.getElementById('info-box').innerHTML = `<p>Use WASD or Arrow Keys to move. Avoid the spider!</p><p id="section-info">Current Section: ${currentSection}</p>`;
+                }
+            }
+
+            // Initialize and start the animation loop
+            init();
+            returnToWeb(); // Ensure the game always starts on the web by calling this once
+            animate();
+        });
+    </script>
+</body>
+</html>
