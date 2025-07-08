@@ -27,22 +27,10 @@
             cursor: default; /* Default cursor for canvas */
             touch-action: none; /* Prevent default touch actions like scrolling/zooming on canvas */
         }
-        #info-box {
-            position: absolute;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: rgba(0, 0, 0, 0.7);
-            padding: 15px 25px;
-            border-radius: 10px;
-            text-align: center;
-            font-size: 1.1em;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-            z-index: 10;
-        }
+        /* Removed #info-box and #mouse-look-info styles */
         #restart-button {
             position: absolute; /* Position relative to body, not the 3D scene */
-            top: 150px; /* Place at the top, below other info */
+            top: 20px; /* Moved to top */
             left: 50%;
             transform: translateX(-50%);
             background-color: #4CAF50; /* Green */
@@ -60,19 +48,6 @@
         #restart-button:hover {
             background-color: #45a049;
             transform: translateX(-50%) translateY(-2px); /* Maintain center alignment */
-        }
-        #mouse-look-info {
-            position: absolute;
-            top: 80px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: rgba(0, 0, 0, 0.7);
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-size: 0.9em;
-            color: #a0aec0;
-            z-index: 10;
-            display: none; /* Hidden by default, only show when in a room */
         }
 
         /* Mobile Controls Styling */
@@ -120,19 +95,9 @@
 
         /* Adjustments for smaller screens (still apply for other elements) */
         @media (max-width: 768px) {
-            #info-box {
-                top: 10px; /* Adjust position for mobile */
-                font-size: 0.9em;
-                padding: 10px 15px;
-            }
-            #mouse-look-info {
-                top: 60px; /* Adjust position for mobile */
-                font-size: 0.8em;
-                padding: 8px 12px;
-            }
             #restart-button {
-                top: 120px; /* Adjust position for mobile */
-                padding: 12px 25px;
+                top: 10px; /* Adjust position for mobile */
+                padding: 10px 20px;
                 font-size: 1em;
             }
             #mobile-controls button {
@@ -144,11 +109,7 @@
     </style>
 </head>
 <body>
-    <div id="info-box">
-        <p>Use WASD or Arrow Keys to move. Avoid the spider!</p>
-        <p id="section-info">Current Section: Start</p>
-    </div>
-    <div id="mouse-look-info">Click and drag on the game to look around.</div>
+    <!-- Removed #info-box and #mouse-look-info divs -->
 
     <button id="restart-button">Back to Site</button>
 
@@ -235,6 +196,10 @@
             let lastTouchX = 0; // Track last touch position for look around
             let lastTouchY = 0; // Track last touch position for look around
 
+            // Raycaster for click interaction
+            const raycaster = new THREE.Raycaster();
+            const mouse = new THREE.Vector2();
+
             // Define sections globally so checkSections can access it
             const sections = {
                 'Start': new THREE.Vector3(0, 0, 0),
@@ -244,9 +209,8 @@
                 'Section D': new THREE.Vector3(0, 0, -webRadius * 0.7),
             };
 
-            const sectionInfoElement = document.getElementById('section-info');
             const restartButton = document.getElementById('restart-button');
-            const mouseLookInfoElement = document.getElementById('mouse-look-info');
+            // Removed sectionInfoElement and mouseLookInfoElement
 
             // Mobile control elements (now individual buttons)
             const mobileUpBtn = document.getElementById('mobile-up');
@@ -450,7 +414,7 @@
                 headSpider.position.z = 2.0 * spiderScaleFactor;
                 headSpider.castShadow = true;
                 headSpider.receiveShadow = true;
-                spider.add(headSpider); /* Fixed: Changed headHider to headSpider */
+                spider.add(headSpider);
 
                 const eyeGeometry = new THREE.SphereGeometry(0.12 * spiderScaleFactor, 8, 8);
                 const eyeMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
@@ -546,13 +510,13 @@
                 });
 
                 // Add "DOUBLE SCOOP OUT NOW" text (stationary at the top)
-                // Adjusted y-position, font size, and scale factor
-                debutAlbumTextSprite1 = createTextSprite('DOUBLE SCOOP OUT NOW', 0, 45, 0, '#FFD700', 60, 15); // Gold color, smaller font, higher
+                // Adjusted y-position, font size, and scale factor for smaller text and higher placement
+                debutAlbumTextSprite1 = createTextSprite('DOUBLE SCOOP OUT NOW', 0, 50, 0, '#FFD700', 45, 10); // Gold color, smaller font, higher
                 gameScene.add(debutAlbumTextSprite1);
 
                 // Add "BED BUG GURU'S BRAND NEW DEBUT ALBUM" text (below the first one)
-                // Adjusted y-position, font size, and scale factor
-                debutAlbumTextSprite2 = createTextSprite("BED BUG GURU'S BRAND NEW DEBUT ALBUM", 0, 35, 0, '#FFD700', 40, 15); // Gold color, even smaller font, more separated
+                // Adjusted y-position, font size, and scale factor for smaller text and more separation
+                debutAlbumTextSprite2 = createTextSprite("BED BUG GURU'S BRAND NEW DEBUT ALBUM", 0, 40, 0, '#FFD700', 30, 10); // Gold color, even smaller font, more separated
                 gameScene.add(debutAlbumTextSprite2);
 
 
@@ -757,6 +721,9 @@
                 // Mousemove listener is always active but its effect is conditional
                 document.addEventListener('mousemove', onMouseMove);
 
+                // Click listener for tabs
+                renderer.domElement.addEventListener('click', onClick);
+
                 // Mobile Touch Controls (individual buttons)
                 mobileUpBtn.addEventListener('touchstart', (e) => { e.preventDefault(); keys['KeyW'] = true; console.log('Up touchstart'); }, { passive: false });
                 mobileUpBtn.addEventListener('touchend', (e) => { e.preventDefault(); keys['KeyW'] = false; console.log('Up touchend'); });
@@ -810,7 +777,7 @@
 
 
                 // Initial UI update
-                updateSectionInfo();
+                // Removed updateSectionInfo() call here as info-box is removed
             }
 
             // New: Handle tab visibility changes
@@ -856,6 +823,39 @@
                 cameraPitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, cameraPitch)); // Clamp pitch
                 if (currentActiveCamera === pageCamera || currentActiveCamera === gameOverCamera) {
                     currentActiveCamera.rotation.x = cameraPitch;
+                }
+            }
+
+            // Handle click events for tabs
+            function onClick(event) {
+                // Only process clicks on the web scene
+                if (currentPage !== 'web') return;
+
+                // Calculate mouse position in normalized device coordinates (-1 to +1)
+                mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
+
+                // Update the raycaster with the camera and mouse position
+                raycaster.setFromCamera(mouse, gameCamera); // Use gameCamera for web scene
+
+                // Calculate objects intersecting the ray
+                const intersects = raycaster.intersectObjects(bandTabObjects);
+
+                if (intersects.length > 0) {
+                    const intersectedSprite = intersects[0].object;
+                    const tabData = intersectedSprite.userData;
+
+                    // Trigger the same logic as proximity detection
+                    if (tabData.type === 'page') {
+                        enterPage(tabData.pageName);
+                    } else if (tabData.type === 'external') {
+                        const siteName = getDomainFromUrl(tabData.url);
+                        showCustomModal(`Do you want to visit ${siteName}?`, () => {
+                            window.open(tabData.url, '_blank');
+                        }, () => {
+                            // Cancel callback (no specific action needed here beyond closing modal)
+                        });
+                    }
                 }
             }
 
@@ -1094,7 +1094,7 @@
                     player.position.y = 0; // Always on the web surface
 
                     // No movement for debutAlbumTextSprite1 and debutAlbumTextSprite2 as requested
-                    // They remain stationary at their set positions (0, 45, 0) and (0, 35, 0)
+                    // They remain stationary at their set positions (0, 50, 0) and (0, 40, 0)
 
                     // Determine current descent speed
                     let currentDescentSpeed = spiderDescentSpeedSlow;
@@ -1154,12 +1154,7 @@
                     }
 
                     checkSections();
-                    checkBandTabs();
-
-                    // Camera for web scene: fixed view, not affected by player's horizontal rotation
-                    // The player's model still rotates, but the camera itself is static.
-                    gameCamera.position.set(0, 30, 70);
-                    gameCamera.lookAt(0, 0, 0);
+                    checkBandTabs(); // Proximity-based check still runs
                 }
 
                 // --- Universal Fall Through Floor Check (only for spider collision leading to hell) ---
@@ -1181,7 +1176,7 @@
                     if (distance < sectionRadius) {
                         if (currentSection !== sectionName) {
                             currentSection = sectionName;
-                            updateSectionInfo();
+                            // Removed updateSectionInfo() call
                             console.log(`Reached ${sectionName}!`);
                         }
                         return;
@@ -1190,7 +1185,7 @@
                 // If not in any specific web section, default to 'Web'
                 if (currentSection !== 'Web' && currentPage === 'web') {
                     currentSection = 'Web';
-                    updateSectionInfo();
+                    // Removed updateSectionInfo() call
                 }
             }
 
@@ -1205,7 +1200,7 @@
                 }
             }
 
-            // Check for band tab hover on the main web
+            // Check for band tab hover on the main web (proximity-based)
             function checkBandTabs() {
                 let hoveredTab = null;
                 const collisionPadding = 1.0; // Add a small padding to the collision box
@@ -1230,8 +1225,9 @@
                 if (hoveredTab) {
                     if (activeTab !== hoveredTab.name) {
                         activeTab = hoveredTab.name;
-                        const infoBox = document.getElementById('info-box');
-                        infoBox.innerHTML = `<p>${hoveredTab.info}</p>`; // Update info box
+                        // Removed infoBox update as info-box is removed
+                        // const infoBox = document.getElementById('info-box');
+                        // infoBox.innerHTML = `<p>${hoveredTab.info}</p>`; // Update info box
 
                         // If it's a page type, transition to that page
                         if (hoveredTab.type === 'page') {
@@ -1249,7 +1245,7 @@
                     }
                 } else if (activeTab !== null) {
                     activeTab = null;
-                    updateSectionInfo(); // Revert info box to section info
+                    // Removed updateSectionInfo() call
                 }
             }
 
@@ -1311,7 +1307,8 @@
             }
 
 
-            // Update UI with current section/page info
+            // Removed updateSectionInfo function entirely as info-box is removed
+            /*
             function updateSectionInfo() {
                 if (currentPage === 'web') {
                     sectionInfoElement.textContent = `Current Section: ${currentSection}`;
@@ -1323,6 +1320,7 @@
                     sectionInfoElement.textContent = `Current Page: ${displayName}`;
                 }
             }
+            */
 
             // Transition to a page scene
             function enterPage(pageName) {
@@ -1330,7 +1328,8 @@
                 gameOver = false; // Ensure game over state is off
                 restartButton.style.display = 'block'; // Show restart button
                 restartButton.textContent = 'Back to Site'; // Change button text
-                mouseLookInfoElement.style.display = 'block'; // Show mouse look info
+                // Removed mouseLookInfoElement.style.display = 'block';
+                // Removed sectionInfoElement.textContent = ...
 
                 // Detach player from gameScene (and its camera)
                 gameScene.remove(player);
@@ -1363,8 +1362,8 @@
                         currentPage = 'web'; // Should not happen if logic is correct
                 }
                 currentActiveScene.add(player); // Add player (and its child camera) to the new scene
-                document.getElementById('info-box').style.display = 'none'; // Hide general info in rooms
-                updateSectionInfo();
+                // Removed document.getElementById('info-box').style.display = 'none';
+                // Removed updateSectionInfo() call
                 activeTab = null; // Reset activeTab after entering a page
                 console.log(`Entered ${pageName} page!`);
             }
@@ -1375,8 +1374,8 @@
                 currentPage = 'hell';
                 restartButton.style.display = 'block'; // Show restart button
                 restartButton.textContent = 'Back to Site'; // Change button text
-                mouseLookInfoElement.style.display = 'block'; // Show mouse look info
-                sectionInfoElement.textContent = `Current Location: The Basement`; // Override info box
+                // Removed mouseLookInfoElement.style.display = 'block';
+                // Removed sectionInfoElement.textContent = ...
 
                 // Detach player from gameScene (and its camera)
                 gameScene.remove(player);
@@ -1410,7 +1409,7 @@
 
                 currentActiveScene = gameOverScene;
                 currentActiveCamera = gameOverCamera; // Set gameOverCamera as active
-                document.getElementById('info-box').style.display = 'none'; // Hide general info in rooms
+                // Removed document.getElementById('info-box').style.display = 'none';
                 activeTab = null; // Reset activeTab after entering hell
                 console.log("Game Over! The spider caught you. Welcome to the insect rock concert!");
                 // Optional: Play heavy rock music here if allowed by environment (e.g., using Tone.js for synthesized sounds)
@@ -1437,7 +1436,7 @@
                 currentPage = 'web';
                 restartButton.style.display = 'none'; // Hide restart button
                 restartButton.textContent = 'Back to Site'; // Reset button text
-                mouseLookInfoElement.style.display = 'none'; // Hide mouse look info
+                // Removed mouseLookInfoElement.style.display = 'none';
                 isDragging = false; // Ensure dragging is off when returning to web
                 renderer.domElement.style.cursor = 'default'; // Reset cursor to default
 
@@ -1483,8 +1482,8 @@
                 currentActiveScene = gameScene;
                 currentActiveCamera = gameCamera; // Set gameCamera as active
                 currentSection = 'Start'; // Reset web section
-                document.getElementById('info-box').style.display = 'block'; // Show general info on web
-                updateSectionInfo();
+                // Removed document.getElementById('info-box').style.display = 'block';
+                // Removed updateSectionInfo() call
                 activeTab = null; // Reset activeTab when returning to web
                 isGameActive = true; // Ensure game is active after returning to web
                 console.log("Returned to the Spider Web!");
@@ -1496,7 +1495,8 @@
                 returnToWeb();
             }
 
-            // Update section info display
+            // Removed updateSectionInfo function entirely as info-box is removed
+            /*
             function updateSectionInfo() {
                 sectionInfoElement.textContent = `Current Section: ${currentSection}`;
                 if (activeTab) {
@@ -1505,6 +1505,7 @@
                     document.getElementById('info-box').innerHTML = `<p>Use WASD or Arrow Keys to move. Avoid the spider!</p><p id="section-info">Current Section: ${currentSection}</p>`;
                 }
             }
+            */
 
             // Initialize and start the animation loop
             init();
