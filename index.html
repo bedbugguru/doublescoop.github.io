@@ -131,7 +131,7 @@
             let player, spider;
             let keys = {};
             const playerSpeed = 0.5;
-            const webRadius = 50; // Radius of the web
+            const webRadius = 35; // Reduced Radius of the web
             const numRadialStrands = 16;
             const numConcentricStrands = 8;
             const sectionRadius = 5; // How close player needs to be to a section point
@@ -326,7 +326,7 @@
 
                 // Camera for game scene (not attached to player, fixed view)
                 gameCamera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.1, 1000); // Increased FOV
-                gameCamera.position.set(0, 30, 70);
+                gameCamera.position.set(0, 25, 50); // Adjusted camera position for smaller web
                 gameCamera.lookAt(0, 0, 0); // Always look at the center of the web
 
                 // Lighting for game scene
@@ -502,6 +502,13 @@
 
 
                 // Add band website tabs to game scene
+                // Adjusted positions based on new webRadius
+                bandTabsData[0].position.set(webRadius * 0.5, 1, webRadius * 0.3); // Merch
+                bandTabsData[1].position.set(-webRadius * 0.4, 1, webRadius * 0.6); // Concerts
+                bandTabsData[2].position.set(webRadius * 0.2, 1, -webRadius * 0.5); // Music
+                bandTabsData[3].position.set(-webRadius * 0.6, 1, -webRadius * 0.2); // About Us
+                bandTabsData[4].position.set(webRadius * 0.8, 1, -webRadius * 0.1); // Legacy Site
+
                 bandTabsData.forEach(tabData => {
                     const tabSprite = createTextSprite(tabData.name, tabData.position.x, tabData.position.y, tabData.position.z);
                     tabSprite.userData = { ...tabData }; // Store all data for interaction
@@ -511,12 +518,12 @@
 
                 // Add "DOUBLE SCOOP OUT NOW" text (stationary at the top)
                 // Adjusted y-position, font size, and scale factor for smaller text and higher placement
-                debutAlbumTextSprite1 = createTextSprite('DOUBLE SCOOP OUT NOW', 0, 50, 0, '#FFD700', 45, 10); // Gold color, smaller font, higher
+                debutAlbumTextSprite1 = createTextSprite('DOUBLE SCOOP OUT NOW', 0, 30, 0, '#FFD700', 45, 10); // Gold color, smaller font, higher
                 gameScene.add(debutAlbumTextSprite1);
 
                 // Add "BED BUG GURU'S BRAND NEW DEBUT ALBUM" text (below the first one)
                 // Adjusted y-position, font size, and scale factor for smaller text and more separation
-                debutAlbumTextSprite2 = createTextSprite("BED BUG GURU'S BRAND NEW DEBUT ALBUM", 0, 40, 0, '#FFD700', 30, 10); // Gold color, even smaller font, more separated
+                debutAlbumTextSprite2 = createTextSprite("BED BUG GURU'S BRAND NEW DEBUT ALBUM", 0, 20, 0, '#FFD700', 30, 10); // Gold color, even smaller font, more separated
                 gameScene.add(debutAlbumTextSprite2);
 
 
@@ -1094,7 +1101,7 @@
                     player.position.y = 0; // Always on the web surface
 
                     // No movement for debutAlbumTextSprite1 and debutAlbumTextSprite2 as requested
-                    // They remain stationary at their set positions (0, 50, 0) and (0, 40, 0)
+                    // They remain stationary at their set positions (0, 30, 0) and (0, 20, 0)
 
                     // Determine current descent speed
                     let currentDescentSpeed = spiderDescentSpeedSlow;
