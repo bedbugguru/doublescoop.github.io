@@ -349,7 +349,7 @@ function switchPage(targetPageName) {
         currentActiveScene = gameScene;
         currentActiveCamera = gameCamera; 
         player.children.forEach(child => child.visible = true);
-        returnToWeb();
+        animate();
     } else if (targetPageName === 'hell') {
         currentActiveScene = gameOverScene;
         currentActiveCamera = gameOverCamera;
@@ -412,7 +412,6 @@ function setupEventListeners() {
         renderer.domElement.style.display = 'block';
         mouseLookInfoElement.style.display = 'block';
         returnToWeb();
-        animate();
     });
 
     // Mobile Control Buttons
