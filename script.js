@@ -12,7 +12,7 @@ const basementPlayerStartY = 2;
 const doorWidth = 8;
 const doorHeight = 12;
 const sectionRadius = 5;
-const basementWallHeight = 75;
+const basementWallHeight = 30;
 
 // Game State
 let gameOver = false;
