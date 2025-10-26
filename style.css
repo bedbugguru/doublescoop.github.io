@@ -1,0 +1,172 @@
+/* Core Three.js and Body Styles */
+body {
+    margin: 0;
+    overflow: hidden;
+    font-family: 'Inter', sans-serif;
+    background-color: #1a202c; /* Dark background */
+    color: #e2e8f0; /* Light text */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+}
+canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: default;
+    touch-action: none;
+}
+
+/* Fallback/Loader Content */
+.fallback-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #1a202c;
+    color: #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    z-index: 100;
+}
+.fallback-container h1, .fallback-container h2 {
+    margin-bottom: 0.5rem;
+}
+.fallback-container nav a {
+    display: inline-block;
+    margin: 0 10px;
+    padding: 8px 15px;
+    background-color: #007bff;
+    border-radius: 5px;
+    color: white;
+    text-decoration: none;
+    transition: background-color 0.3s;
+}
+.fallback-container nav a:hover {
+    background-color: #0056b3;
+}
+#enter-3d {
+    margin-top: 20px;
+    padding: 15px 30px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.2em;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    transition: background-color 0.3s ease;
+}
+#enter-3d:hover {
+    background-color: #45a049;
+}
+
+/* UI Button Styles */
+.ui-button {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #4CAF50; /* Green */
+    color: white;
+    padding: 15px 30px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.2em;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    z-index: 30;
+    display: none; /* Hidden by default */
+}
+.ui-button:hover {
+    background-color: #45a049;
+    transform: translateX(-50%) translateY(-2px);
+}
+
+/* Mouse Look Info Box */
+.mouse-info {
+    position: absolute;
+    bottom: 10%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.6);
+    color: white;
+    padding: 8px 15px;
+    border-radius: 5px;
+    font-size: 0.9em;
+    z-index: 40;
+    pointer-events: none; /* Allows clicks to pass through */
+    display: none; /* Hidden by default */
+}
+
+/* Mobile Controls Styling (Unchanged) */
+#mobile-controls {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    z-index: 50;
+    pointer-events: none;
+    background: linear-gradient(to top, rgba(0,0,0,0.6), transparent);
+    padding-bottom: 20px;
+}
+#mobile-controls .row {
+    display: flex;
+    gap: 5px;
+}
+#mobile-controls button {
+    pointer-events: auto;
+    touch-action: none;
+    width: 70px;
+    height: 70px;
+    background-color: rgba(70, 70, 70, 0.8);
+    border-radius: 10px;
+    color: white;
+    font-size: 2em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.1s ease;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+}
+#mobile-controls button:active {
+    background-color: rgba(100, 100, 100, 0.8);
+}
+
+/* Media Query for Mobile Adjustments */
+@media (max-width: 768px) {
+    .ui-button {
+        top: 10px;
+        padding: 10px 20px;
+        font-size: 1em;
+    }
+    #mobile-controls button {
+        width: 60px;
+        height: 60px;
+        font-size: 1.8em;
+    }
+    /* Hide mobile controls on desktop for a cleaner view */
+    #mobile-controls {
+        display: none;
+    }
+}
+@media (min-width: 769px) {
+    /* Hide mobile controls on desktop for a cleaner view */
+    #mobile-controls {
+        display: none;
+    }
+}
