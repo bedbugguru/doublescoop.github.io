@@ -17,7 +17,7 @@ const basementWallHeight = 75;
 // Game State
 let gameOver = false;
 let currentSection = 'Start';
-let currentPage = 'web'; // 'web', 'music', 'about_us', 'contact', 'hell'
+let currentPage = 'web'; // 'web', 'music', 'contact', 'hell'
 let isGameActive = true;
 
 // Spider State
@@ -28,7 +28,7 @@ let spiderString;
 const spiderScaleFactor = 0.6;
 
 // Scene and Camera Management
-let gameScene, musicScene, aboutUsScene, contactScene, gameOverScene;
+let gameScene, musicScene, contactScene, gameOverScene;
 let gameCamera; // Fixed camera for web scene
 let pageCamera, gameOverCamera; // Player-attached cameras
 let currentActiveScene, currentActiveCamera;
@@ -66,11 +66,9 @@ const pageWallColor = 0x333333; // Dark grey for walls
 
 // Data for Band Tabs on the Web (The likely source of the Syntax Error was here)
 const bandTabsData = [
-    { name: 'Merch', position: new THREE.Vector3(webRadius * 0.5, 1, webRadius * 0.3), info: 'Visit our Merch Store!', type: 'external', url: 'https://bedbugguru.bandcamp.com/merch/' },
-    { name: 'Concerts', position: new THREE.Vector3(-webRadius * 0.4, 1, webRadius * 0.6), info: 'See Upcoming Concerts!', type: 'external', url: 'https://www.songkick.com/artists/10289853-bed-bug-guru/calendar' },
+    { name: 'Merch', position: new THREE.Vector3(webRadius * 0.5, 1, webRadius * 0.3), info: 'buy our merch', type: 'external', url: 'https://bedbugguru.bandcamp.com/merch/' },
+    { name: 'Shows', position: new THREE.Vector3(-webRadius * 0.4, 1, webRadius * 0.6), info: 'see us play', type: 'external', url: 'https://www.songkick.com/artists/10289853-bed-bug-guru/calendar' },
     { name: 'Music', position: new THREE.Vector3(webRadius * 0.2, 1, -webRadius * 0.5), info: 'Stream Our Music!', type: 'page', pageName: 'music' },
-    { name: 'About Us', position: new THREE.Vector3(-webRadius * 0.6, 1, -webRadius * 0.2), info: 'Learn About the Band!', type: 'page', pageName: 'about_us' },
-    { name: 'Legacy Site', position: new THREE.Vector3(webRadius * 0.8, 1, -webRadius * 0.1), info: 'Explore our Old Site!', type: 'external', url: 'https://www.bedbugguru.org' },
     { name: 'Contact', position: new THREE.Vector3(0, 1, -webRadius * 0.8), info: 'Get in Touch!', type: 'page', pageName: 'contact' }
 ];
 
@@ -313,8 +311,6 @@ function createPageScene(pageName, backgroundColor) {
         wallText = 'OUR MUSIC\nAlbum: "Web of Sound"\nSingle: "Silk & Fury"';
         // Add the custom streaming links menu
         createMusicButtonMenu(scene);
-    } else if (pageName === 'about_us') {
-        wallText = 'ABOUT THE BAND\nFormed in 2023\nGenre: Insect Rock';
     } else if (pageName === 'contact') {
         wallText = 'CONTACT US\nEmail: contact@bedbugguru.com\nBooking: booking@bedbugguru.com';
     }
@@ -337,11 +333,10 @@ function switchPage(targetPageName) {
     
     gameScene.visible = false;
     musicScene.visible = false;
-    aboutUsScene.visible = false;
     contactScene.visible = false; 
     gameOverScene.visible = false;
 
-    const isPageScene = ['music', 'about_us', 'contact'].includes(targetPageName);
+    const isPageScene = ['music', 'contact'].includes(targetPageName);
     restartButton.style.display = isPageScene ? 'block' : 'none';
     mouseLookInfoElement.style.display = isPageScene ? 'block' : 'none'; 
 
@@ -355,8 +350,7 @@ function switchPage(targetPageName) {
         currentActiveCamera = gameOverCamera;
         player.children.forEach(child => child.visible = true);
     } else {
-        currentActiveScene = targetPageName === 'music' ? musicScene : 
-                           targetPageName === 'about_us' ? aboutUsScene : 
+        currentActiveScene = targetPageName === 'music' ? musicScene :  
                            contactScene;
         currentActiveCamera = pageCamera;
         player.children.forEach(child => child.visible = false);
@@ -613,7 +607,6 @@ function init() {
     // Scene Creation
     gameScene = createGameScene();
     musicScene = createPageScene('music', 0x660066);
-    aboutUsScene = createPageScene('about_us', 0x006600);
     contactScene = createPageScene('contact', 0x999900); // New contact scene
     gameOverScene = createGameOverScene();
 
