@@ -185,47 +185,158 @@ function createRendererAndAppend() {
 }
 
 function createPlayerAndCameras() {
-    player = new THREE.Group();
-    // Placeholder for player body (visible in web/gameover scenes)
-    const playerBody = new THREE.Mesh(
-        new THREE.SphereGeometry(1, 16, 16),
-        new THREE.MeshBasicMaterial({ color: 0x00ff00 })
-    );
-    playerBody.position.y = 1;
-    player.add(playerBody);
+ // Create Player (a Group to hold body and camera)
+                const playerMaterial = new THREE.MeshStandardMaterial({ color: 0x007bff }); // Use MeshStandardMaterial
+                player = new THREE.Group(); // Player is now a group for its body and camera
+                const bodyCylinderHeight = 1.5;
+                const bodyCylinderRadius = 0.8;
+                const bodyCylinderGeometry = new THREE.CylinderGeometry(bodyCylinderRadius, bodyCylinderRadius, bodyCylinderHeight, 32);
+                const bodyCylinder = new THREE.Mesh(bodyCylinderGeometry, playerMaterial);
+                bodyCylinder.position.y = bodyCylinderHeight / 2;
+                bodyCylinder.castShadow = true; // Player casts shadows
+                bodyCylinder.receiveShadow = true; // Player receives shadows
+                player.add(bodyCylinder);
+                const topCapGeometry = new THREE.SphereGeometry(bodyCylinderRadius, 32, 32, 0, Math.PI * 2, 0, Math.PI / 2);
+                const topCap = new THREE.Mesh(topCapGeometry, playerMaterial);
+                topCap.position.y = bodyCylinderHeight;
+                topCap.castShadow = true;
+                topCap.receiveShadow = true;
+                player.add(topCap);
+                const bottomCapGeometry = new THREE.SphereGeometry(bodyCylinderRadius, 32, 32, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2);
+                const bottomCap = new THREE.Mesh(bottomCapGeometry, playerMaterial);
+                bottomCap.position.y = 0;
+                bottomCap.castShadow = true;
+                bottomCap.receiveShadow = true;
+                player.add(bottomCap);
+                const headGeometry = new THREE.SphereGeometry(0.6, 16, 16);
+                const head = new THREE.Mesh(headGeometry, playerMaterial);
+                head.position.y = bodyCylinderHeight + bodyCylinderRadius + 0.3;
+                head.castShadow = true;
+                head.receiveShadow = true;
+                player.add(head);
+                player.position.set(0, 0, 0); // Initial player position on web
+                gameScene.add(player); // Add player to the game scene initially
 
-    pageCamera = new THREE.PerspectiveCamera(80, window.innerWidth / window.innerHeight, 0.1, 100);
-    pageCamera.position.set(0, pagePlayerStartY + 0.5, 0);
-    player.add(pageCamera);
+                // Page Camera (attached to player)
+                pageCamera = new THREE.PerspectiveCamera(80, window.innerWidth / window.innerHeight, 0.1, 100); // Increased FOV
+                pageCamera.position.set(0, pagePlayerStartY + 0.5, 0); // Position camera slightly above player's body
+                player.add(pageCamera); // Add page camera as a child of the player
 
-    gameOverCamera = new THREE.PerspectiveCamera(80, window.innerWidth / window.innerHeight, 0.1, 100);
-    gameOverCamera.position.set(0, basementPlayerStartY + 0.5, 0);
-    player.add(gameOverCamera);
-
-    gameCamera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.1, 1000);
-    gameCamera.position.set(0, 30, 70);
-    gameCamera.lookAt(0, 0, 0);
+                // Game Over Camera (attached to player)
+                gameOverCamera = new THREE.PerspectiveCamera(80, window.innerWidth / window.innerHeight, 0.1, 100); // Increased FOV
+                gameOverCamera.position.set(0, basementPlayerStartY + 0.5, 0); // Position camera slightly above player's body
+                player.add(gameOverCamera); // Add game over camera as a child of the player
 }
 
 function createSpiderAndString() {
-    spider = new THREE.Group();
-    // Placeholder for spider body
-    const spiderBody = new THREE.Mesh(
-        new THREE.SphereGeometry(1.5 * spiderScaleFactor, 16, 16),
-        new THREE.MeshStandardMaterial({ color: 0x4a2a0a })
-    );
-    spider.add(spiderBody);
-    spider.position.y = spiderInitialY;
+    // Create Spider for game scene
+                const spiderMaterial = new THREE.MeshStandardMaterial({ color: 0x4a2a0a }); // Use MeshStandardMaterial
+                spider = new THREE.Group();
+                const abdomenGeometry = new THREE.SphereGeometry(2.5 * spiderScaleFactor, 32, 16);
+                const abdomen = new THREE.Mesh(abdomenGeometry, spiderMaterial);
+                abdomen.scale.y = 1.2;
+                abdomen.position.z = -2.0 * spiderScaleFactor;
+                abdomen.castShadow = true;
+                abdomen.receiveShadow = true;
+                spider.add(abdomen);
+                const cephalothoraxGeometry = new THREE.SphereGeometry(1.8 * spiderScaleFactor, 32, 16);
+                const cephalothorax = new THREE.Mesh(cephalothoraxGeometry, spiderMaterial);
+                cephalothorax.scale.y = 0.8;
+                cephalothorax.position.z = 0.5 * spiderScaleFactor;
+                cephalothorax.castShadow = true;
+                cephalothorax.receiveShadow = true;
+                spider.add(cephalothorax);
+                const headSpiderGeometry = new THREE.SphereGeometry(0.8 * spiderScaleFactor, 16, 8);
+                const headSpider = new THREE.Mesh(headSpiderGeometry, spiderMaterial);
+                headSpider.scale.y = 0.8;
+                headSpider.position.z = 2.0 * spiderScaleFactor;
+                headSpider.castShadow = true;
+                headSpider.receiveShadow = true;
+                spider.add(headSpider);
 
-    // Spider string creation
-    const stringMaterial = new THREE.LineBasicMaterial({ color: 0x888888, linewidth: 1 });
-    const stringGeometry = new THREE.BufferGeometry();
-    const initialStringPoints = [
-        new THREE.Vector3(0, spiderInitialY + 5, 0),
-        new THREE.Vector3(0, spiderInitialY, 0)
-    ];
-    stringGeometry.setFromPoints(initialStringPoints);
-    spiderString = new THREE.Line(stringGeometry, stringMaterial);
+                const eyeGeometry = new THREE.SphereGeometry(0.12 * spiderScaleFactor, 8, 8);
+                const eyeMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
+                const eyePositions = [
+                    new THREE.Vector3(0.3, 0.4, 2.3), new THREE.Vector3(-0.3, 0.4, 2.3),
+                    new THREE.Vector3(0.15, 0.2, 2.4), new THREE.Vector3(-0.15, 0.2, 2.4),
+                    new THREE.Vector3(0.45, 0.2, 2.2), new THREE.Vector3(-0.45, 0.2, 2.2)
+                ];
+                eyePositions.forEach(pos => {
+                    const eye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+                    eye.position.copy(pos.multiplyScalar(spiderScaleFactor));
+                    eye.castShadow = true;
+                    eye.receiveShadow = true;
+                    spider.add(eye);
+                });
+
+                const fangGeometry = new THREE.CylinderGeometry(0.1 * spiderScaleFactor, 0.05 * spiderScaleFactor, 0.8 * spiderScaleFactor, 8);
+                const fangMaterial = new THREE.MeshStandardMaterial({ color: 0x663300 }); // Use MeshStandardMaterial
+                const fang1 = new THREE.Mesh(fangGeometry, fangMaterial);
+                fang1.rotation.x = Math.PI / 2; fang1.rotation.z = Math.PI / 8;
+                fang1.position.set(0.3 * spiderScaleFactor, -0.2 * spiderScaleFactor, 2.8 * spiderScaleFactor);
+                fang1.castShadow = true;
+                fang1.receiveShadow = true;
+                spider.add(fang1);
+                const fang2 = new THREE.Mesh(fangGeometry, fangMaterial);
+                fang2.rotation.x = Math.PI / 2; fang2.rotation.z = -Math.PI / 8;
+                fang2.position.set(-0.3 * spiderScaleFactor, -0.2 * spiderScaleFactor, 2.8 * spiderScaleFactor);
+                fang2.castShadow = true;
+                fang2.receiveShadow = true;
+                spider.add(fang2);
+
+                function createLegSegment(length, thickness, rotationX) {
+                    const segmentGeometry = new THREE.CylinderGeometry(thickness, thickness, length, 8);
+                    const segment = new THREE.Mesh(segmentGeometry, spiderMaterial);
+                    segment.rotation.x = rotationX;
+                    segment.castShadow = true;
+                    segment.receiveShadow = true;
+                    return segment;
+                }
+
+                const legLength1 = 2.0 * spiderScaleFactor;
+                const legLength2 = 2.5 * spiderScaleFactor;
+                const legLength3 = 1.0 * spiderScaleFactor;
+                const legThickness = 0.12 * spiderScaleFactor;
+
+                for (let i = 0; i < 4; i++) {
+                    const legGroup = new THREE.Group();
+                    const segment1 = createLegSegment(legLength1, legThickness, Math.PI / 2);
+                    segment1.position.y = -legLength1 / 2;
+                    legGroup.add(segment1);
+                    const segment2 = createLegSegment(legLength2, legThickness, Math.PI / 2);
+                    segment2.position.y = -legLength1 - legLength2 / 2;
+                    segment2.rotation.z = Math.PI / 3;
+                    legGroup.add(segment2);
+                    const segment3 = createLegSegment(legLength3, legThickness * 0.8, Math.PI / 2);
+                    segment3.position.y = -legLength1 - legLength2 - legLength3 / 2;
+                    segment3.rotation.z = Math.PI / 6;
+                    legGroup.add(segment3);
+
+                    const zOffsets = [1.2, 0.5, -0.5, -1.2];
+                    const xBaseOffset = 1.8;
+                    const angleSpread = Math.PI / 8;
+                    const zOffset = zOffsets[i] * spiderScaleFactor;
+                    const xOffset = (i % 2 === 0 ? xBaseOffset : -xBaseOffset) * spiderScaleFactor;
+
+                    legGroup.position.set(xOffset, 0, zOffset);
+                    legGroup.rotation.y = (i % 2 === 0 ? -1 : 1) * angleSpread * (i < 2 ? 1 : -1);
+                    spider.add(legGroup);
+                }
+                // Initial spider position for descent (will be set relative to player in returnToWeb)
+                spider.position.set(0, spiderInitialY, 0); // Default to (0,0,0) initially, will be updated
+                gameScene.add(spider);
+
+                // Add spider string
+                const stringMaterial = new THREE.LineBasicMaterial({ color: 0x888888, linewidth: 1 });
+                const stringGeometry = new THREE.BufferGeometry();
+                // Initial points for the string (top fixed point, and spider's current position)
+                const initialStringPoints = [
+                    new THREE.Vector3(spider.position.x, spiderInitialY + spiderStringTopOffset, spider.position.z),
+                    spider.position.clone()
+                ];
+                stringGeometry.setFromPoints(initialStringPoints);
+                spiderString = new THREE.Line(stringGeometry, stringMaterial);
+                gameScene.add(spiderString);
 }
 
 function createBandTabSprites(scene) {
@@ -583,10 +694,83 @@ function animate() {
     if (currentPage !== 'web' && currentPage !== 'hell') {
         updateMovement();
     } else if (currentPage === 'web') {
-        // Only run spider logic on the web
-        updateSpider();
-        // checkCollisions(); // Assuming you have collision logic
-    }
+                    // Web exploration (player movement, spider, tabs)
+                    if (moveDirection.lengthSq() > 0) {
+                        moveDirection.normalize().multiplyScalar(currentSpeed);
+                        player.position.add(moveDirection);
+
+                        // Keep player within web bounds (circular)
+                        const distance = player.position.distanceTo(new THREE.Vector3(0, player.position.y, 0));
+                        if (distance > webRadius) {
+                            player.position.normalize().multiplyScalar(webRadius);
+                            player.position.y = 0;
+                        }
+                    }
+                    player.position.y = 0; // Always on the web surface
+
+                    // No movement for debutAlbumTextSprite1 and debutAlbumTextSprite2 as requested
+                    // They remain stationary at their set positions (0, 50, 0) and (0, 40, 0)
+
+                    // Determine current descent speed
+                    let currentDescentSpeed = spiderDescentSpeedSlow;
+                    // If player moves while spider is descending, accelerate its descent permanently for this cycle
+                    if (spiderIsDescending && !spiderDescentAccelerated && (keys['KeyW'] || keys['ArrowUp'] || keys['KeyS'] || keys['ArrowDown'] || keys['KeyA'] || keys['KeyD'])) { // Check for any movement key
+                        spiderDescentAccelerated = true;
+                    }
+                    if (spiderDescentAccelerated) {
+                        currentDescentSpeed = spiderDescentSpeedFast;
+                    }
+
+                    // Spider descent logic
+                    if (spiderIsDescending) {
+                        if (spider.position.y > spiderTargetY) {
+                            spider.position.y = Math.max(spiderTargetY, spider.position.y - currentDescentSpeed); // Use conditional speed
+                            // Update string end point
+                            spiderString.geometry.attributes.position.setY(1, spider.position.y);
+                            spiderString.geometry.attributes.position.needsUpdate = true;
+                        } else {
+                            spider.position.y = spiderTargetY;
+                            spiderIsDescending = false;
+                            spiderDescentAccelerated = false; // Reset acceleration for next descent
+                            // Ensure string is correctly positioned at the end
+                            spiderString.geometry.attributes.position.setY(1, spider.position.y);
+                            spiderString.geometry.attributes.position.needsUpdate = true;
+                        }
+                        // Update string top point to follow spider's horizontal movement
+                        spiderString.geometry.attributes.position.setX(0, spider.position.x);
+                        spiderString.geometry.attributes.position.setZ(0, spider.position.z);
+                        spiderString.geometry.attributes.position.setX(1, spider.position.x); // Ensure spider's horizontal position is also updated on string
+                        spiderString.geometry.attributes.position.setZ(1, spider.position.z);
+                        spiderString.geometry.attributes.position.needsUpdate = true;
+
+                    } else {
+                        // Spider chasing player (only when not descending)
+                        const spiderDirection = new THREE.Vector3().subVectors(player.position, spider.position).normalize();
+                        spider.position.add(spiderDirection.multiplyScalar(spiderSpeed)); // Use new spiderSpeed
+                        spider.position.y = spiderTargetY; // Ensure it stays at target Y
+
+                        // Update string to follow spider on the web
+                        spiderString.geometry.attributes.position.setX(0, spider.position.x);
+                        spiderString.geometry.attributes.position.setZ(0, spider.position.z);
+                        spiderString.geometry.attributes.position.setY(1, spider.position.y);
+                        spiderString.geometry.attributes.position.setX(1, spider.position.x);
+                        spiderString.geometry.attributes.position.setZ(1, spider.position.z);
+                        spiderString.geometry.attributes.position.needsUpdate = true;
+                    }
+
+                    // Collision detection (spider and player) - only if spider is not descending
+                    if (!spiderIsDescending) {
+                        const playerBox = new THREE.Box3().setFromObject(player);
+                        const spiderBox = new THREE.Box3().setFromObject(spider);
+
+                        if (playerBox.intersectsBox(spiderBox)) {
+                            enterHell();
+                        }
+                    }
+
+                    checkSections();
+                    checkBandTabs(); // Proximity-based check still runs
+                }
     
     // Use the currently active scene and camera for rendering
     if (currentActiveScene && currentActiveCamera) {
